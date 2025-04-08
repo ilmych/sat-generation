@@ -1,0 +1,1466 @@
+[
+  {
+    "title": "The Awakening",
+    "year": 1899,
+    "author": "Kate Chopin",
+    "type": "novel"
+  },
+  {
+    "title": "The Yellow Wallpaper",
+    "year": 1892,
+    "author": "Charlotte Perkins Gilman",
+    "type": "short story"
+  },
+  {
+    "title": "My Ántonia",
+    "year": 1918,
+    "author": "Willa Cather",
+    "type": "novel"
+  },
+  {
+    "title": "Their Eyes Were Watching God",
+    "year": 1937,
+    "author": "Zora Neale Hurston",
+    "type": "novel"
+  },
+  {
+    "title": "The Love Song of J. Alfred Prufrock",
+    "year": 1915,
+    "author": "T.S. Eliot",
+    "type": "poem"
+  },
+  {
+    "title": "Middlemarch",
+    "year": 1871,
+    "author": "George Eliot",
+    "type": "novel"
+  },
+  {
+    "title": "Pride and Prejudice",
+    "year": 1813,
+    "author": "Jane Austen",
+    "type": "novel"
+  },
+  {
+    "title": "Jane Eyre",
+    "year": 1847,
+    "author": "Charlotte Brontë",
+    "type": "novel"
+  },
+  {
+    "title": "Wuthering Heights",
+    "year": 1847,
+    "author": "Emily Brontë",
+    "type": "novel"
+  },
+  {
+    "title": "The Waste Land",
+    "year": 1922,
+    "author": "T.S. Eliot",
+    "type": "poem"
+  },
+  {
+    "title": "The Scarlet Letter",
+    "year": 1850,
+    "author": "Nathaniel Hawthorne",
+    "type": "novel"
+  },
+  {
+    "title": "The Great Gatsby",
+    "year": 1925,
+    "author": "F. Scott Fitzgerald",
+    "type": "novel"
+  },
+  {
+    "title": "To the Lighthouse",
+    "year": 1927,
+    "author": "Virginia Woolf",
+    "type": "novel"
+  },
+  {
+    "title": "Mrs. Dalloway",
+    "year": 1925,
+    "author": "Virginia Woolf",
+    "type": "novel"
+  },
+  {
+    "title": "Heart of Darkness",
+    "year": 1899,
+    "author": "Joseph Conrad",
+    "type": "novella"
+  },
+  {
+    "title": "The Sound and the Fury",
+    "year": 1929,
+    "author": "William Faulkner",
+    "type": "novel"
+  },
+  {
+    "title": "The Picture of Dorian Gray",
+    "year": 1890,
+    "author": "Oscar Wilde",
+    "type": "novel"
+  },
+  {
+    "title": "The Importance of Being Earnest",
+    "year": 1895,
+    "author": "Oscar Wilde",
+    "type": "play"
+  },
+  {
+    "title": "Leaves of Grass",
+    "year": 1855,
+    "author": "Walt Whitman",
+    "type": "poetry collection"
+  },
+  {
+    "title": "Moby-Dick",
+    "year": 1851,
+    "author": "Herman Melville",
+    "type": "novel"
+  },
+  {
+    "title": "The Souls of Black Folk",
+    "year": 1903,
+    "author": "W.E.B. Du Bois",
+    "type": "essays"
+  },
+  {
+    "title": "Adventures of Huckleberry Finn",
+    "year": 1884,
+    "author": "Mark Twain",
+    "type": "novel"
+  },
+  {
+    "title": "The Age of Innocence",
+    "year": 1920,
+    "author": "Edith Wharton",
+    "type": "novel"
+  },
+  {
+    "title": "Ethan Frome",
+    "year": 1911,
+    "author": "Edith Wharton",
+    "type": "novella"
+  },
+  {
+    "title": "Poems",
+    "year": 1773,
+    "author": "Phillis Wheatley",
+    "type": "poetry collection"
+  },
+  {
+    "title": "The Waste Land",
+    "year": 1922,
+    "author": "T.S. Eliot",
+    "type": "poem"
+  },
+  {
+    "title": "A Room of One's Own",
+    "year": 1929,
+    "author": "Virginia Woolf",
+    "type": "essay"
+  },
+  {
+    "title": "The Cherry Orchard",
+    "year": 1904,
+    "author": "Anton Chekhov",
+    "type": "play"
+  },
+  {
+    "title": "Uncle Vanya",
+    "year": 1898,
+    "author": "Anton Chekhov",
+    "type": "play"
+  },
+  {
+    "title": "Mending Wall",
+    "year": 1914,
+    "author": "Robert Frost",
+    "type": "poem"
+  },
+  {
+    "title": "The Road Not Taken",
+    "year": 1916,
+    "author": "Robert Frost",
+    "type": "poem"
+  },
+  {
+    "title": "Notes from Underground",
+    "year": 1864,
+    "author": "Fyodor Dostoevsky",
+    "type": "novella"
+  },
+  {
+    "title": "A Doll's House",
+    "year": 1879,
+    "author": "Henrik Ibsen",
+    "type": "play"
+  },
+  {
+    "title": "Hedda Gabler",
+    "year": 1891,
+    "author": "Henrik Ibsen",
+    "type": "play"
+  },
+  {
+    "title": "The Metamorphosis",
+    "year": 1915,
+    "author": "Franz Kafka",
+    "type": "novella"
+  },
+  {
+    "title": "Narrative of the Life of Frederick Douglass",
+    "year": 1845,
+    "author": "Frederick Douglass",
+    "type": "autobiography"
+  },
+  {
+    "title": "The Autobiography of an Ex-Colored Man",
+    "year": 1912,
+    "author": "James Weldon Johnson",
+    "type": "novel"
+  },
+  {
+    "title": "The Red Badge of Courage",
+    "year": 1895,
+    "author": "Stephen Crane",
+    "type": "novel"
+  },
+  {
+    "title": "Sister Carrie",
+    "year": 1900,
+    "author": "Theodore Dreiser",
+    "type": "novel"
+  },
+  {
+    "title": "The House of Mirth",
+    "year": 1905,
+    "author": "Edith Wharton",
+    "type": "novel"
+  },
+  {
+    "title": "Main Street",
+    "year": 1920,
+    "author": "Sinclair Lewis",
+    "type": "novel"
+  },
+  {
+    "title": "Winesburg, Ohio",
+    "year": 1919,
+    "author": "Sherwood Anderson",
+    "type": "short story cycle"
+  },
+  {
+    "title": "The Call of the Wild",
+    "year": 1903,
+    "author": "Jack London",
+    "type": "novel"
+  },
+  {
+    "title": "The Song of Hiawatha",
+    "year": 1855,
+    "author": "Henry Wadsworth Longfellow",
+    "type": "poem"
+  },
+  {
+    "title": "Cane",
+    "year": 1923,
+    "author": "Jean Toomer",
+    "type": "novel"
+  },
+  {
+    "title": "Go Tell It on the Mountain",
+    "year": 1953,
+    "author": "James Baldwin",
+    "type": "novel"
+  },
+  {
+    "title": "The Bluest Eye",
+    "year": 1970,
+    "author": "Toni Morrison",
+    "type": "novel"
+  },
+  {
+    "title": "Incidents in the Life of a Slave Girl",
+    "year": 1861,
+    "author": "Harriet Jacobs",
+    "type": "autobiography"
+  },
+  {
+    "title": "The Jungle",
+    "year": 1906,
+    "author": "Upton Sinclair",
+    "type": "novel"
+  },
+  {
+    "title": "Little Women",
+    "year": 1868,
+    "author": "Louisa May Alcott",
+    "type": "novel"
+  },
+  {
+    "title": "Selected Poems",
+    "year": 1926,
+    "author": "Langston Hughes",
+    "type": "poetry collection"
+  },
+  {
+    "title": "Beloved",
+    "year": 1987,
+    "author": "Toni Morrison",
+    "type": "novel"
+  },
+  {
+    "title": "Infinite Jest",
+    "year": 1996,
+    "author": "David Foster Wallace",
+    "type": "novel"
+  },
+  {
+    "title": "The God of Small Things",
+    "year": 1997,
+    "author": "Arundhati Roy",
+    "type": "novel"
+  },
+  {
+    "title": "White Teeth",
+    "year": 2000,
+    "author": "Zadie Smith",
+    "type": "novel"
+  },
+  {
+    "title": "The Brief Wondrous Life of Oscar Wao",
+    "year": 2007,
+    "author": "Junot Díaz",
+    "type": "novel"
+  },
+  {
+    "title": "Americanah",
+    "year": 2013,
+    "author": "Chimamanda Ngozi Adichie",
+    "type": "novel"
+  },
+  {
+    "title": "The Road",
+    "year": 2006,
+    "author": "Cormac McCarthy",
+    "type": "novel"
+  },
+  {
+    "title": "A Visit from the Goon Squad",
+    "year": 2010,
+    "author": "Jennifer Egan",
+    "type": "novel"
+  },
+  {
+    "title": "The Remains of the Day",
+    "year": 1989,
+    "author": "Kazuo Ishiguro",
+    "type": "novel"
+  },
+  {
+    "title": "Never Let Me Go",
+    "year": 2005,
+    "author": "Kazuo Ishiguro",
+    "type": "novel"
+  },
+  {
+    "title": "The Handmaid's Tale",
+    "year": 1985,
+    "author": "Margaret Atwood",
+    "type": "novel"
+  },
+  {
+    "title": "Oryx and Crake",
+    "year": 2003,
+    "author": "Margaret Atwood",
+    "type": "novel"
+  },
+  {
+    "title": "On Beauty",
+    "year": 2005,
+    "author": "Zadie Smith",
+    "type": "novel"
+  },
+  {
+    "title": "The Corrections",
+    "year": 2001,
+    "author": "Jonathan Franzen",
+    "type": "novel"
+  },
+  {
+    "title": "Midnight's Children",
+    "year": 1981,
+    "author": "Salman Rushdie",
+    "type": "novel"
+  },
+  {
+    "title": "Interpreter of Maladies",
+    "year": 1999,
+    "author": "Jhumpa Lahiri",
+    "type": "short story collection"
+  },
+  {
+    "title": "The Namesake",
+    "year": 2003,
+    "author": "Jhumpa Lahiri",
+    "type": "novel"
+  },
+  {
+    "title": "The Kite Runner",
+    "year": 2003,
+    "author": "Khaled Hosseini",
+    "type": "novel"
+  },
+  {
+    "title": "Wolf Hall",
+    "year": 2009,
+    "author": "Hilary Mantel",
+    "type": "novel"
+  },
+  {
+    "title": "All the Light We Cannot See",
+    "year": 2014,
+    "author": "Anthony Doerr",
+    "type": "novel"
+  },
+  {
+    "title": "The Underground Railroad",
+    "year": 2016,
+    "author": "Colson Whitehead",
+    "type": "novel"
+  },
+  {
+    "title": "Normal People",
+    "year": 2018,
+    "author": "Sally Rooney",
+    "type": "novel"
+  },
+  {
+    "title": "Homegoing",
+    "year": 2016,
+    "author": "Yaa Gyasi",
+    "type": "novel"
+  },
+  {
+    "title": "Salvage the Bones",
+    "year": 2011,
+    "author": "Jesmyn Ward",
+    "type": "novel"
+  },
+  {
+    "title": "The Color Purple",
+    "year": 1982,
+    "author": "Alice Walker",
+    "type": "novel"
+  },
+  {
+    "title": "Ceremony",
+    "year": 1977,
+    "author": "Leslie Marmon Silko",
+    "type": "novel"
+  },
+  {
+    "title": "Things Fall Apart",
+    "year": 1958,
+    "author": "Chinua Achebe",
+    "type": "novel"
+  },
+  {
+    "title": "Invisible Man",
+    "year": 1952,
+    "author": "Ralph Ellison",
+    "type": "novel"
+  },
+  {
+    "title": "One Hundred Years of Solitude",
+    "year": 1967,
+    "author": "Gabriel García Márquez",
+    "type": "novel"
+  },
+  {
+    "title": "Love in the Time of Cholera",
+    "year": 1985,
+    "author": "Gabriel García Márquez",
+    "type": "novel"
+  },
+  {
+    "title": "The House on Mango Street",
+    "year": 1984,
+    "author": "Sandra Cisneros",
+    "type": "novel"
+  },
+  {
+    "title": "The Woman Warrior",
+    "year": 1976,
+    "author": "Maxine Hong Kingston",
+    "type": "memoir"
+  },
+  {
+    "title": "No-No Boy",
+    "year": 1957,
+    "author": "John Okada",
+    "type": "novel"
+  },
+  {
+    "title": "Native Speaker",
+    "year": 1995,
+    "author": "Chang-rae Lee",
+    "type": "novel"
+  },
+  {
+    "title": "Pachinko",
+    "year": 2017,
+    "author": "Min Jin Lee",
+    "type": "novel"
+  },
+  {
+    "title": "Exit West",
+    "year": 2017,
+    "author": "Mohsin Hamid",
+    "type": "novel"
+  },
+  {
+    "title": "Sing, Unburied, Sing",
+    "year": 2017,
+    "author": "Jesmyn Ward",
+    "type": "novel"
+  },
+  {
+    "title": "A Little Life",
+    "year": 2015,
+    "author": "Hanya Yanagihara",
+    "type": "novel"
+  },
+  {
+    "title": "Lincoln in the Bardo",
+    "year": 2017,
+    "author": "George Saunders",
+    "type": "novel"
+  },
+  {
+    "title": "The Sympathizer",
+    "year": 2015,
+    "author": "Viet Thanh Nguyen",
+    "type": "novel"
+  },
+  {
+    "title": "Station Eleven",
+    "year": 2014,
+    "author": "Emily St. John Mandel",
+    "type": "novel"
+  },
+  {
+    "title": "The Night Watchman",
+    "year": 2020,
+    "author": "Louise Erdrich",
+    "type": "novel"
+  },
+  {
+    "title": "The Amazing Adventures of Kavalier & Clay",
+    "year": 2000,
+    "author": "Michael Chabon",
+    "type": "novel"
+  },
+  {
+    "title": "A Confederacy of Dunces",
+    "year": 1980,
+    "author": "John Kennedy Toole",
+    "type": "novel"
+  },
+  {
+    "title": "A Thousand Splendid Suns",
+    "year": 2007,
+    "author": "Khaled Hosseini",
+    "type": "novel"
+  },
+  {
+    "title": "The English Patient",
+    "year": 1992,
+    "author": "Michael Ondaatje",
+    "type": "novel"
+  },
+  {
+    "title": "Gilead",
+    "year": 2004,
+    "author": "Marilynne Robinson",
+    "type": "novel"
+  },
+  {
+    "title": "Atonement",
+    "year": 2001,
+    "author": "Ian McEwan",
+    "type": "novel"
+  },
+  {
+    "title": "The Known World",
+    "year": 2003,
+    "author": "Edward P. Jones",
+    "type": "novel"
+  },
+  {
+    "title": "Cloud Atlas",
+    "year": 2004,
+    "author": "David Mitchell",
+    "type": "novel"
+  },
+  {
+    "title": "The Blind Assassin",
+    "year": 2000,
+    "author": "Margaret Atwood",
+    "type": "novel"
+  },
+  {
+    "title": "The Line of Beauty",
+    "year": 2004,
+    "author": "Alan Hollinghurst",
+    "type": "novel"
+  },
+  {
+    "title": "Everything I Never Told You",
+    "year": 2014,
+    "author": "Celeste Ng",
+    "type": "novel"
+  },
+  {
+    "title": "The Goldfinch",
+    "year": 2013,
+    "author": "Donna Tartt",
+    "type": "novel"
+  },
+  {
+    "title": "The Secret History",
+    "year": 1992,
+    "author": "Donna Tartt",
+    "type": "novel"
+  },
+  {
+    "title": "Half of a Yellow Sun",
+    "year": 2006,
+    "author": "Chimamanda Ngozi Adichie",
+    "type": "novel"
+  },
+  {
+    "title": "Persepolis",
+    "year": 2000,
+    "author": "Marjane Satrapi",
+    "type": "graphic memoir"
+  },
+  {
+    "title": "The Joy Luck Club",
+    "year": 1989,
+    "author": "Amy Tan",
+    "type": "novel"
+  },
+  {
+    "title": "The Things They Carried",
+    "year": 1990,
+    "author": "Tim O'Brien",
+    "type": "short story collection"
+  },
+  {
+    "title": "Kindred",
+    "year": 1979,
+    "author": "Octavia E. Butler",
+    "type": "novel"
+  },
+  {
+    "title": "Slaughterhouse-Five",
+    "year": 1969,
+    "author": "Kurt Vonnegut",
+    "type": "novel"
+  },
+  {
+    "title": "The Bell Jar",
+    "year": 1963,
+    "author": "Sylvia Plath",
+    "type": "novel"
+  },
+  {
+    "title": "The Crying of Lot 49",
+    "year": 1966,
+    "author": "Thomas Pynchon",
+    "type": "novel"
+  },
+  {
+    "title": "Gravity's Rainbow",
+    "year": 1973,
+    "author": "Thomas Pynchon",
+    "type": "novel"
+  },
+  {
+    "title": "The Catcher in the Rye",
+    "year": 1951,
+    "author": "J.D. Salinger",
+    "type": "novel"
+  },
+  {
+    "title": "Catch-22",
+    "year": 1961,
+    "author": "Joseph Heller",
+    "type": "novel"
+  },
+  {
+    "title": "To Kill a Mockingbird",
+    "year": 1960,
+    "author": "Harper Lee",
+    "type": "novel"
+  },
+  {
+    "title": "The Unbearable Lightness of Being",
+    "year": 1984,
+    "author": "Milan Kundera",
+    "type": "novel"
+  },
+  {
+    "title": "Austerlitz",
+    "year": 2001,
+    "author": "W.G. Sebald",
+    "type": "novel"
+  },
+  {
+    "title": "2666",
+    "year": 2004,
+    "author": "Roberto Bolaño",
+    "type": "novel"
+  },
+  {
+    "title": "The Savage Detectives",
+    "year": 1998,
+    "author": "Roberto Bolaño",
+    "type": "novel"
+  },
+  {
+    "title": "The Shadow of the Wind",
+    "year": 2001,
+    "author": "Carlos Ruiz Zafón",
+    "type": "novel"
+  },
+  {
+    "title": "My Brilliant Friend",
+    "year": 2012,
+    "author": "Elena Ferrante",
+    "type": "novel"
+  },
+  {
+    "title": "The Vegetarian",
+    "year": 2007,
+    "author": "Han Kang",
+    "type": "novel"
+  },
+  {
+    "title": "Norwegian Wood",
+    "year": 1987,
+    "author": "Haruki Murakami",
+    "type": "novel"
+  },
+  {
+    "title": "1Q84",
+    "year": 2009,
+    "author": "Haruki Murakami",
+    "type": "novel"
+  },
+  {
+    "title": "The Wind-Up Bird Chronicle",
+    "year": 1994,
+    "author": "Haruki Murakami",
+    "type": "novel"
+  },
+  {
+    "title": "Disgrace",
+    "year": 1999,
+    "author": "J.M. Coetzee",
+    "type": "novel"
+  },
+  {
+    "title": "Life & Times of Michael K",
+    "year": 1983,
+    "author": "J.M. Coetzee",
+    "type": "novel"
+  },
+  {
+    "title": "Waiting for the Barbarians",
+    "year": 1980,
+    "author": "J.M. Coetzee",
+    "type": "novel"
+  },
+  {
+    "title": "The Inheritance of Loss",
+    "year": 2006,
+    "author": "Kiran Desai",
+    "type": "novel"
+  },
+  {
+    "title": "A Fine Balance",
+    "year": 1995,
+    "author": "Rohinton Mistry",
+    "type": "novel"
+  },
+  {
+    "title": "The White Tiger",
+    "year": 2008,
+    "author": "Aravind Adiga",
+    "type": "novel"
+  },
+  {
+    "title": "The Round House",
+    "year": 2012,
+    "author": "Louise Erdrich",
+    "type": "novel"
+  },
+  {
+    "title": "There There",
+    "year": 2018,
+    "author": "Tommy Orange",
+    "type": "novel"
+  },
+  {
+    "title": "The Sellout",
+    "year": 2015,
+    "author": "Paul Beatty",
+    "type": "novel"
+  },
+  {
+    "title": "The Nickel Boys",
+    "year": 2019,
+    "author": "Colson Whitehead",
+    "type": "novel"
+  },
+  {
+    "title": "On Earth We're Briefly Gorgeous",
+    "year": 2019,
+    "author": "Ocean Vuong",
+    "type": "novel"
+  },
+  {
+    "title": "Interior Chinatown",
+    "year": 2020,
+    "author": "Charles Yu",
+    "type": "novel"
+  },
+  {
+    "title": "Trust",
+    "year": 2022,
+    "author": "Hernan Diaz",
+    "type": "novel"
+  },
+  {
+    "title": "Memorial Drive",
+    "year": 2020,
+    "author": "Natasha Trethewey",
+    "type": "memoir"
+  },
+  {
+    "title": "Hamnet",
+    "year": 2020,
+    "author": "Maggie O'Farrell",
+    "type": "novel"
+  },
+  {
+    "title": "Girl, Woman, Other",
+    "year": 2019,
+    "author": "Bernardine Evaristo",
+    "type": "novel"
+  },
+  {
+    "title": "The Overstory",
+    "year": 2018,
+    "author": "Richard Powers",
+    "type": "novel"
+  },
+  {
+    "title": "Klara and the Sun",
+    "year": 2021,
+    "author": "Kazuo Ishiguro",
+    "type": "novel"
+  },
+    {
+      "title": "The Waste Land",
+      "year": 1922,
+      "author": "T.S. Eliot",
+      "type": "poem"
+    },
+    {
+      "title": "Howl",
+      "year": 1956,
+      "author": "Allen Ginsberg",
+      "type": "poem"
+    },
+    {
+      "title": "Song of Myself",
+      "year": 1855,
+      "author": "Walt Whitman",
+      "type": "poem"
+    },
+    {
+      "title": "The Second Coming",
+      "year": 1919,
+      "author": "W.B. Yeats",
+      "type": "poem"
+    },
+    {
+      "title": "The Raven",
+      "year": 1845,
+      "author": "Edgar Allan Poe",
+      "type": "poem"
+    },
+    {
+      "title": "The Road Not Taken",
+      "year": 1916,
+      "author": "Robert Frost",
+      "type": "poem"
+    },
+    {
+      "title": "Ariel",
+      "year": 1965,
+      "author": "Sylvia Plath",
+      "type": "poem"
+    },
+    {
+      "title": "Daddy",
+      "year": 1965,
+      "author": "Sylvia Plath",
+      "type": "poem"
+    },
+    {
+      "title": "The Red Wheelbarrow",
+      "year": 1923,
+      "author": "William Carlos Williams",
+      "type": "poem"
+    },
+    {
+      "title": "Thirteen Ways of Looking at a Blackbird",
+      "year": 1917,
+      "author": "Wallace Stevens",
+      "type": "poem"
+    },
+    {
+      "title": "Diving into the Wreck",
+      "year": 1973,
+      "author": "Adrienne Rich",
+      "type": "poem"
+    },
+    {
+      "title": "Still I Rise",
+      "year": 1978,
+      "author": "Maya Angelou",
+      "type": "poem"
+    },
+    {
+      "title": "Dream Variations",
+      "year": 1926,
+      "author": "Langston Hughes",
+      "type": "poem"
+    },
+    {
+      "title": "The Negro Speaks of Rivers",
+      "year": 1921,
+      "author": "Langston Hughes",
+      "type": "poem"
+    },
+    {
+      "title": "Stopping by Woods on a Snowy Evening",
+      "year": 1923,
+      "author": "Robert Frost",
+      "type": "poem"
+    },
+    {
+      "title": "Do Not Go Gentle into That Good Night",
+      "year": 1951,
+      "author": "Dylan Thomas",
+      "type": "poem"
+    },
+    {
+      "title": "The Tiger",
+      "year": 1794,
+      "author": "William Blake",
+      "type": "poem"
+    },
+    {
+      "title": "Ozymandias",
+      "year": 1818,
+      "author": "Percy Bysshe Shelley",
+      "type": "poem"
+    },
+    {
+      "title": "Ode to a Nightingale",
+      "year": 1819,
+      "author": "John Keats",
+      "type": "poem"
+    },
+    {
+      "title": "i carry your heart with me",
+      "year": 1952,
+      "author": "e.e. cummings",
+      "type": "poem"
+    },
+    {
+      "title": "anyone lived in a pretty how town",
+      "year": 1940,
+      "author": "e.e. cummings",
+      "type": "poem"
+    },
+    {
+      "title": "We Real Cool",
+      "year": 1960,
+      "author": "Gwendolyn Brooks",
+      "type": "poem"
+    },
+    {
+      "title": "Power",
+      "year": 1978,
+      "author": "Audre Lorde",
+      "type": "poem"
+    },
+    {
+      "title": "I, Too",
+      "year": 1926,
+      "author": "Langston Hughes",
+      "type": "poem"
+    },
+    {
+      "title": "Because I could not stop for Death",
+      "year": 1890,
+      "author": "Emily Dickinson",
+      "type": "poem"
+    },
+    {
+      "title": "Wild Geese",
+      "year": 1986,
+      "author": "Mary Oliver",
+      "type": "poem"
+    },
+    {
+      "title": "One Art",
+      "year": 1976,
+      "author": "Elizabeth Bishop",
+      "type": "poem"
+    },
+    {
+      "title": "The Fish",
+      "year": 1946,
+      "author": "Elizabeth Bishop",
+      "type": "poem"
+    },
+    {
+      "title": "The Love Song of J. Alfred Prufrock",
+      "year": 1915,
+      "author": "T.S. Eliot",
+      "type": "poem"
+    },
+    {
+      "title": "Anecdote of the Jar",
+      "year": 1919,
+      "author": "Wallace Stevens",
+      "type": "poem"
+    },
+    {
+      "title": "Kubla Khan",
+      "year": 1816,
+      "author": "Samuel Taylor Coleridge",
+      "type": "poem"
+    },
+    {
+      "title": "Annabel Lee",
+      "year": 1849,
+      "author": "Edgar Allan Poe",
+      "type": "poem"
+    },
+    {
+      "title": "If We Must Die",
+      "year": 1919,
+      "author": "Claude McKay",
+      "type": "poem"
+    },
+    {
+      "title": "Ode on a Grecian Urn",
+      "year": 1819,
+      "author": "John Keats",
+      "type": "poem"
+    },
+    {
+      "title": "The Rime of the Ancient Mariner",
+      "year": 1798,
+      "author": "Samuel Taylor Coleridge",
+      "type": "poem"
+    },
+    {
+      "title": "Ulysses",
+      "year": 1842,
+      "author": "Alfred, Lord Tennyson",
+      "type": "poem"
+    },
+    {
+      "title": "The World is Too Much With Us",
+      "year": 1807,
+      "author": "William Wordsworth",
+      "type": "poem"
+    },
+    {
+      "title": "She Walks in Beauty",
+      "year": 1814,
+      "author": "Lord Byron",
+      "type": "poem"
+    },
+    {
+      "title": "The Darkling Thrush",
+      "year": 1900,
+      "author": "Thomas Hardy",
+      "type": "poem"
+    },
+    {
+      "title": "Snake",
+      "year": 1923,
+      "author": "D.H. Lawrence",
+      "type": "poem"
+    },
+    {
+      "title": "Memory",
+      "year": 1917,
+      "author": "H.D. (Hilda Doolittle)",
+      "type": "poem"
+    },
+    {
+      "title": "The Garden",
+      "year": 1681,
+      "author": "Andrew Marvell",
+      "type": "poem"
+    },
+    {
+      "title": "Sonnet 18",
+      "year": 1609,
+      "author": "William Shakespeare",
+      "type": "poem"
+    },
+    {
+      "title": "Sonnet 130",
+      "year": 1609,
+      "author": "William Shakespeare",
+      "type": "poem"
+    },
+    {
+      "title": "The Flea",
+      "year": 1633,
+      "author": "John Donne",
+      "type": "poem"
+    },
+    {
+      "title": "A Valediction: Forbidding Mourning",
+      "year": 1633,
+      "author": "John Donne",
+      "type": "poem"
+    },
+    {
+      "title": "When I Have Fears That I May Cease to Be",
+      "year": 1848,
+      "author": "John Keats",
+      "type": "poem"
+    },
+    {
+      "title": "Harlem (A Dream Deferred)",
+      "year": 1951,
+      "author": "Langston Hughes",
+      "type": "poem"
+    },
+    {
+      "title": "A Supermarket in California",
+      "year": 1955,
+      "author": "Allen Ginsberg",
+      "type": "poem"
+    },
+    {
+      "title": "When You Are Old",
+      "year": 1893,
+      "author": "W.B. Yeats",
+      "type": "poem"
+    },
+    {
+      "title": "Hope is the thing with feathers",
+      "year": 1891,
+      "author": "Emily Dickinson",
+      "type": "poem"
+    },
+    {
+      "title": "The Convergence of the Twain",
+      "year": 1912,
+      "author": "Thomas Hardy",
+      "type": "poem"
+    },
+    {
+      "title": "America",
+      "year": 1956,
+      "author": "Allen Ginsberg",
+      "type": "poem"
+    },
+    {
+      "title": "Dulce et Decorum Est",
+      "year": 1920,
+      "author": "Wilfred Owen",
+      "type": "poem"
+    },
+    {
+      "title": "Easter, 1916",
+      "year": 1916,
+      "author": "W.B. Yeats",
+      "type": "poem"
+    },
+    {
+      "title": "Lady Lazarus",
+      "year": 1965,
+      "author": "Sylvia Plath",
+      "type": "poem"
+    },
+    {
+      "title": "My Last Duchess",
+      "year": 1842,
+      "author": "Robert Browning",
+      "type": "poem"
+    },
+    {
+      "title": "This Is Just To Say",
+      "year": 1934,
+      "author": "William Carlos Williams",
+      "type": "poem"
+    },
+    {
+      "title": "Fire and Ice",
+      "year": 1920,
+      "author": "Robert Frost",
+      "type": "poem"
+    },
+    {
+      "title": "Design",
+      "year": 1922,
+      "author": "Robert Frost",
+      "type": "poem"
+    },
+    {
+      "title": "The Chimney Sweeper",
+      "year": 1789,
+      "author": "William Blake",
+      "type": "poem"
+    },
+    {
+      "title": "A Psalm of Life",
+      "year": 1838,
+      "author": "Henry Wadsworth Longfellow",
+      "type": "poem"
+    },
+    {
+      "title": "Sea Rose",
+      "year": 1916,
+      "author": "H.D. (Hilda Doolittle)",
+      "type": "poem"
+    },
+    {
+      "title": "The Idea of Order at Key West",
+      "year": 1934,
+      "author": "Wallace Stevens",
+      "type": "poem"
+    },
+    {
+      "title": "In a Station of the Metro",
+      "year": 1913,
+      "author": "Ezra Pound",
+      "type": "poem"
+    },
+    {
+      "title": "The Cantos",
+      "year": 1925,
+      "author": "Ezra Pound",
+      "type": "poem"
+    },
+    {
+      "title": "The Wild Swans at Coole",
+      "year": 1917,
+      "author": "W.B. Yeats",
+      "type": "poem"
+    },
+    {
+      "title": "What the Living Do",
+      "year": 1997,
+      "author": "Marie Howe",
+      "type": "poem"
+    },
+    {
+      "title": "Migrant Blues",
+      "year": 2011,
+      "author": "Ocean Vuong",
+      "type": "poem"
+    },
+    {
+      "title": "When I Grow Up I Want to Be a List of Further Possibilities",
+      "year": 2017,
+      "author": "Chen Chen",
+      "type": "poem"
+    },
+    {
+      "title": "Citizen: An American Lyric",
+      "year": 2014,
+      "author": "Claudia Rankine",
+      "type": "poem/prose"
+    },
+    {
+      "title": "Don't Let Me Be Lonely",
+      "year": 2004,
+      "author": "Claudia Rankine",
+      "type": "poem/prose"
+    },
+    {
+      "title": "Life on Mars",
+      "year": 2011,
+      "author": "Tracy K. Smith",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Native Guard",
+      "year": 2006,
+      "author": "Natasha Trethewey",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Catalog of Unabashed Gratitude",
+      "year": 2015,
+      "author": "Ross Gay",
+      "type": "poetry collection"
+    },
+    {
+      "title": "The Tradition",
+      "year": 2019,
+      "author": "Jericho Brown",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Night Sky with Exit Wounds",
+      "year": 2016,
+      "author": "Ocean Vuong",
+      "type": "poetry collection"
+    },
+    {
+      "title": "The New Testament",
+      "year": 2014,
+      "author": "Jericho Brown",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Brown",
+      "year": 2018,
+      "author": "Kevin Young",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Electric Arches",
+      "year": 2017,
+      "author": "Eve L. Ewing",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Whereas",
+      "year": 2017,
+      "author": "Layli Long Soldier",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Calling a Wolf a Wolf",
+      "year": 2017,
+      "author": "Kaveh Akbar",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Deaf Republic",
+      "year": 2019,
+      "author": "Ilya Kaminsky",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Olio",
+      "year": 2016,
+      "author": "Tyehimba Jess",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Wade in the Water",
+      "year": 2018,
+      "author": "Tracy K. Smith",
+      "type": "poetry collection"
+    },
+    {
+      "title": "The Carrying",
+      "year": 2018,
+      "author": "Ada Limón",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Bright Dead Things",
+      "year": 2015,
+      "author": "Ada Limón",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Postcolonial Love Poem",
+      "year": 2020,
+      "author": "Natalie Diaz",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Stag's Leap",
+      "year": 2012,
+      "author": "Sharon Olds",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Memorial",
+      "year": 2011,
+      "author": "Alice Oswald",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Magical Negro",
+      "year": 2019,
+      "author": "Morgan Parker",
+      "type": "poetry collection"
+    },
+    {
+      "title": "American Sonnets for My Past and Future Assassin",
+      "year": 2018,
+      "author": "Terrance Hayes",
+      "type": "poetry collection"
+    },
+    {
+      "title": "The Performance of Becoming Human",
+      "year": 2016,
+      "author": "Daniel Borzutzky",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Crush",
+      "year": 2005,
+      "author": "Richard Siken",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Look",
+      "year": 2016,
+      "author": "Solmaz Sharif",
+      "type": "poetry collection"
+    },
+    {
+      "title": "If They Come for Us",
+      "year": 2018,
+      "author": "Fatimah Asghar",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Homie",
+      "year": 2020,
+      "author": "Danez Smith",
+      "type": "poetry collection"
+    },
+    {
+      "title": "Don't Call Us Dead",
+      "year": 2017,
+      "author": "Danez Smith",
+      "type": "poetry collection"
+    }
+  ]
