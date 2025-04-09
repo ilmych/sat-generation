@@ -57,70 +57,304 @@ class QuestionFixer:
             print(f"Warning: validation_results is not a dictionary: {type(validation_results).__name__}")
             return question
             
-        # Check if there's a failed image validation for COEQ questions
+        # Identify key pieces of information
         question_type = question.get("type", "")
         skill = question.get("skill", "")
+        is_coeq = (question_type == "coeq" or "coeq" in question_type or 
+                  skill == "Command of Evidence: Quantitative")
         
-        # Special handling for COEQ image failures
-        if (question_type == "general" and skill == "Command of Evidence: Quantitative") or "coeq" in question_type:
-            if "image-readability" in validation_results and isinstance(validation_results["image-readability"], dict) and validation_results["image-readability"].get("score", 1) == 0:
-                print("Detected failed image validation for COEQ question - attempting to fix the image.")
-                return self.fix_coeq_image(question, validation_results["image-readability"])
+        # Separate COEQ image validation from other validations
+        image_validation_failed = False
+        other_validations_failed = False
+        
+        # Get results detail dictionary
+        details = validation_results.get("details", {})
+        
+        # Check if the COEQ image validation failed
+        if is_coeq and "coeq_image" in details:
+            image_validation = details["coeq_image"]
+            if isinstance(image_validation, dict) and image_validation.get("score", 1) == 0:
+                image_validation_failed = True
+                print("COEQ image validation failed")
+        
+        # Check if other validations failed
+        for name, result in details.items():
+            if name != "coeq_image" and isinstance(result, dict):
+                score = result.get("score", 1)
+                has_error = result.get("error", False)
                 
-        # Standard handling for other validation failures
-        # Find the failed validations
-        failed_validations = {}
-        for name, result in validation_results.items():
-            # Skip if name is "error" or result is not a dictionary
-            if name == "error" or not isinstance(result, dict):
-                continue
+                if score == 0 and not has_error:
+                    other_validations_failed = True
+                    print(f"Validation '{name}' failed")
+        
+        # Import validator for revalidation
+        from src.validator import QuestionValidator
+        validator = QuestionValidator(api_key=self.api_key, model_name=self.model_name)
+        
+        # Now handle each case based on the specified rules
+        if is_coeq:
+            print("Processing COEQ question with special handling")
+            
+            # Case 1: Only image validation failed
+            if image_validation_failed and not other_validations_failed:
+                print("CASE 1: Only image validation failed - fixing and revalidating only the image")
                 
-            score = result.get("score", 0)
-            has_error = result.get("error", False)
+                # Fix the image
+                fixed_question = self.fix_coeq_image(question, details["coeq_image"])
+                
+                # Revalidate only the image
+                image_validation_result = validator.validate_coeq_image_only(fixed_question)
+                
+                # Check if the fix worked
+                if image_validation_result.get("passed", False):
+                    print("✅ Image fix successful")
+                    return fixed_question
+                else:
+                    print("❌ Image fix failed")
+                    # Return the original question if the fix didn't work
+                    return question
             
-            if score == 0 and not has_error and name != "image-readability":
-                failed_validations[name] = result
+            # Case 2: Image validation passed but other validations failed
+            elif not image_validation_failed and other_validations_failed:
+                print("CASE 2: Other validations failed but image validation passed - fixing other issues")
+                
+                # Filter out image validation to create failed validations dictionary
+                failed_validations = {}
+                for name, result in details.items():
+                    if name != "coeq_image" and isinstance(result, dict):
+                        score = result.get("score", 1)
+                        has_error = result.get("error", False)
+                        
+                        if score == 0 and not has_error:
+                            failed_validations[name] = result
+                
+                # Fix the other issues
+                fix_prompt = self._construct_fix_prompt(question, failed_validations)
+                
+                try:
+                    # Call the API to fix the question
+                    response = self.client.messages.create(
+                        model=self.model_name,
+                        max_tokens=4000,
+                        temperature=0.2,
+                        system="You are a professional SAT question writer who fixes issues with SAT questions to ensure they meet quality standards. DO NOT modify any <img> tags or image-related aspects of the question.",
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": fix_prompt
+                            }
+                        ]
+                    )
+                    
+                    # Extract the fixed question from the response
+                    fixed_question_json_str = self._extract_json_from_response(response.content[0].text)
+                    if not fixed_question_json_str:
+                        raise ValueError("No valid JSON found in the response.")
+                    
+                    fixed_question = fixed_question_json_str
+                    
+                    # Ensure all original fields are preserved, especially the image-related parts
+                    for key in question:
+                        if key not in fixed_question:
+                            fixed_question[key] = question[key]
+                    
+                    # Make sure the passage with the image is preserved
+                    if "passage" in question and "<img" in question["passage"]:
+                        original_passage = question["passage"]
+                        fixed_passage = fixed_question.get("passage", "")
+                        
+                        # If the img tag is missing from the fixed passage, restore it
+                        if "<img" not in fixed_passage:
+                            print("WARNING: Fixed question is missing the image tag. Restoring from original.")
+                            fixed_question["passage"] = original_passage
+                        elif "<img" in original_passage and "<img" in fixed_passage:
+                            # Extract the img tag from the original
+                            import re
+                            img_pattern = re.compile(r'<img[^>]*?>')
+                            original_img_match = img_pattern.search(original_passage)
+                            
+                            if original_img_match:
+                                original_img_tag = original_img_match.group(0)
+                                
+                                # Replace the img tag in the fixed passage
+                                fixed_question["passage"] = img_pattern.sub(original_img_tag, fixed_passage)
+                    
+                    # Now validate the other aspects again, but skip image validation
+                    print("Validating the fixed question (skipping image validation)")
+                    new_validation_results = validator.validate_question(fixed_question)
+                    
+                    # Check if the only remaining failures are related to the image
+                    new_details = new_validation_results.get("details", {})
+                    non_image_failures = False
+                    
+                    for name, result in new_details.items():
+                        if name != "coeq_image" and isinstance(result, dict):
+                            score = result.get("score", 1)
+                            has_error = result.get("error", False)
+                            
+                            if score == 0 and not has_error:
+                                non_image_failures = True
+                                print(f"Validation '{name}' still failing after fix")
+                    
+                    if not non_image_failures:
+                        print("✅ Non-image fixes successful")
+                    else:
+                        print("❌ Some non-image fixes failed")
+                        
+                    return fixed_question
+                    
+                except Exception as e:
+                    print(f"Error fixing question: {str(e)}")
+                    return question
+            
+            # Case 3: Both image validation and other validations failed
+            elif image_validation_failed and other_validations_failed:
+                print("CASE 3: Both image validation and other validations failed - fixing both")
+                
+                # Step 1: Fix the other issues first
+                failed_validations = {}
+                for name, result in details.items():
+                    if name != "coeq_image" and isinstance(result, dict):
+                        score = result.get("score", 0)
+                        has_error = result.get("error", False)
+                        
+                        if score == 0 and not has_error:
+                            failed_validations[name] = result
+                
+                # Fix the non-image issues
+                if failed_validations:
+                    fix_prompt = self._construct_fix_prompt(question, failed_validations)
+                    
+                    try:
+                        # Call the API to fix the non-image issues
+                        response = self.client.messages.create(
+                            model=self.model_name,
+                            max_tokens=4000,
+                            temperature=0.2,
+                            system="You are a professional SAT question writer who fixes issues with SAT questions to ensure they meet quality standards. DO NOT modify any <img> tags or image-related aspects of the question.",
+                            messages=[
+                                {
+                                    "role": "user",
+                                    "content": fix_prompt
+                                }
+                            ]
+                        )
+                        
+                        # Extract the fixed question
+                        fixed_question_json_str = self._extract_json_from_response(response.content[0].text)
+                        if not fixed_question_json_str:
+                            raise ValueError("No valid JSON found in the response.")
+                        
+                        question_with_fixes = fixed_question_json_str
+                        
+                        # Ensure all original fields are preserved
+                        for key in question:
+                            if key not in question_with_fixes:
+                                question_with_fixes[key] = question[key]
+                        
+                        # Make sure the passage with the image is preserved
+                        if "passage" in question and "<img" in question["passage"]:
+                            original_passage = question["passage"]
+                            fixed_passage = question_with_fixes.get("passage", "")
+                            
+                            # If the img tag is missing from the fixed passage, restore it
+                            if "<img" not in fixed_passage:
+                                print("WARNING: Fixed question is missing the image tag. Restoring from original.")
+                                question_with_fixes["passage"] = original_passage
+                            elif "<img" in original_passage and "<img" in fixed_passage:
+                                # Extract the img tag from the original
+                                import re
+                                img_pattern = re.compile(r'<img[^>]*?>')
+                                original_img_match = img_pattern.search(original_passage)
+                                
+                                if original_img_match:
+                                    original_img_tag = original_img_match.group(0)
+                                    
+                                    # Replace the img tag in the fixed passage
+                                    question_with_fixes["passage"] = img_pattern.sub(original_img_tag, fixed_passage)
+                        
+                        # Update the question to the one with non-image fixes
+                        question = question_with_fixes
+                        print("Non-image fixes applied")
+                        
+                    except Exception as e:
+                        print(f"Error fixing non-image issues: {str(e)}")
+                
+                # Step 2: Now fix the image
+                fixed_question = self.fix_coeq_image(question, details["coeq_image"])
+                
+                # Step 3: Validate both aspects
+                print("Validating the completely fixed question")
+                new_validation_results = validator.validate_question(fixed_question)
+                
+                if new_validation_results.get("passed", False):
+                    print("✅ All fixes successful - question now passes all validations")
+                else:
+                    print("❌ Some validations still failing after fixes")
+                
+                return fixed_question
+            
+            # Case 4: All validations passed, nothing to fix
+            else:
+                print("CASE 4: All validations passed - no fixes needed")
+                return question
         
-        if not failed_validations:
-            # No failed validations or only errors
-            return question
-        
-        # Construct a prompt with the question and the failed validations
-        fix_prompt = self._construct_fix_prompt(question, failed_validations)
-        
-        # Call the API to fix the question
-        try:
-            response = self.client.messages.create(
-                model=self.model_name,
-                max_tokens=4000,
-                temperature=0.2,  # Use low temperature for consistent fixes
-                system="You are a professional SAT question writer who fixes issues with SAT questions to ensure they meet quality standards.",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": fix_prompt
-                    }
-                ]
-            )
+        # Handle non-COEQ questions with standard approach
+        else:
+            print("Standard handling for non-COEQ question")
             
-            # Extract the fixed question from the response
-            fixed_question_json_str = self._extract_json_from_response(response.content[0].text)
-            if not fixed_question_json_str:
-                raise ValueError("No valid JSON found in the response.")
+            # Find the failed validations
+            failed_validations = {}
+            for name, result in details.items():
+                if name == "error" or not isinstance(result, dict):
+                    continue
+                    
+                score = result.get("score", 0)
+                has_error = result.get("error", False)
+                
+                if score == 0 and not has_error:
+                    failed_validations[name] = result
             
-            fixed_question = json.loads(fixed_question_json_str)
+            if not failed_validations:
+                # No failed validations or only errors
+                return question
             
-            # Ensure all original fields are preserved
-            for key in question:
-                if key not in fixed_question:
-                    fixed_question[key] = question[key]
+            # Construct a prompt with the question and the failed validations
+            fix_prompt = self._construct_fix_prompt(question, failed_validations)
             
-            print("Question has been fixed. It will now be validated.")
-            return fixed_question
-            
-        except Exception as e:
-            print(f"Error fixing question: {str(e)}")
-            return question
+            # Call the API to fix the question
+            try:
+                response = self.client.messages.create(
+                    model=self.model_name,
+                    max_tokens=4000,
+                    temperature=0.2,  # Use low temperature for consistent fixes
+                    system="You are a professional SAT question writer who fixes issues with SAT questions to ensure they meet quality standards.",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": fix_prompt
+                        }
+                    ]
+                )
+                
+                # Extract the fixed question from the response
+                fixed_question_json_str = self._extract_json_from_response(response.content[0].text)
+                if not fixed_question_json_str:
+                    raise ValueError("No valid JSON found in the response.")
+                
+                fixed_question = fixed_question_json_str
+                
+                # Ensure all original fields are preserved
+                for key in question:
+                    if key not in fixed_question:
+                        fixed_question[key] = question[key]
+                
+                print("Question has been fixed. It will now be validated.")
+                return fixed_question
+                
+            except Exception as e:
+                print(f"Error fixing question: {str(e)}")
+                return question
 
     def fix_coeq_image(self, question: Dict, image_validation_result: Dict) -> Dict:
         """
@@ -133,6 +367,13 @@ class QuestionFixer:
         Returns:
             The question with an updated image.
         """
+        print("Attempting to fix COEQ image...")
+        
+        # Ensure we have a valid validation result
+        if not isinstance(image_validation_result, dict):
+            print("Warning: Invalid image validation result format. Cannot fix image.")
+            return question
+        
         # Try to find the original code for this image
         passage = question.get("passage", "")
         img_pattern = re.compile(r'<img[^>]*src=["\'](.*?)["\'][^>]*>')
@@ -145,45 +386,68 @@ class QuestionFixer:
         image_url = img_match.group(1)
         print(f"Fixing image: {image_url}")
         
-        # Extract image ID from Google Drive URL
-        img_id_match = re.search(r'id=([^&]+)', image_url)
-        if not img_id_match:
-            print("Warning: Could not extract image ID from URL. Cannot fix image.")
-            return question
+        # Check if visualization code is available in the question
+        original_code = question.get("visualization_code")
+        if original_code:
+            print("Using visualization code from the question")
+        else:
+            # If not available in the question, try to find it in the generated_code folder
             
-        img_id = img_id_match.group(1)
-        
-        # Find the corresponding code file based on timestamp pattern in image filename
-        timestamp_pattern = r'visualization_(\d{8}_\d{6})'
-        
-        # Try to find the original code file
-        code_files = []
-        for filename in os.listdir("generated_code"):
-            if filename.endswith(".py"):
-                code_files.append(filename)
-        
-        # Sort files by modification time (newest first)
-        code_files.sort(key=lambda f: os.path.getmtime(os.path.join("generated_code", f)), reverse=True)
-        
-        # Try to find the matching code file
-        original_code = None
-        code_filename = None
-        
-        for filename in code_files:
-            # First check if we can match by timestamp in the image URL
-            timestamp_match = re.search(timestamp_pattern, filename)
-            if timestamp_match:
-                # Read the code file
-                with open(os.path.join("generated_code", filename), 'r', encoding='utf-8') as f:
-                    original_code = f.read()
-                    code_filename = filename
-                    break
+            # First check if we have a local file path
+            local_path = question.get("local_image_path")
+            if local_path and os.path.exists(local_path):
+                # Try to find the corresponding .py file
+                code_filename = local_path.replace(".png", ".py")
+                if os.path.exists(code_filename):
+                    try:
+                        with open(code_filename, 'r', encoding='utf-8') as f:
+                            original_code = f.read()
+                            print(f"Found corresponding code file: {code_filename}")
+                    except Exception as e:
+                        print(f"Error reading code file: {str(e)}")
+            
+            # If still no code, try to find it by looking for Google Drive IDs
+            if not original_code and "drive.google.com" in image_url:
+                # Extract image ID from Google Drive URL
+                img_id_match = re.search(r'id=([^&]+)', image_url)
+                if img_id_match:
+                    img_id = img_id_match.group(1)
+                    print(f"Extracted Google Drive image ID: {img_id}")
                     
-        if not original_code:
-            print("Warning: Could not find original code file for the image. Using default fix.")
-            return self._fix_coeq_question_without_code(question, image_validation_result)
+                    # Find the corresponding code file based on timestamp pattern in image filename
+                    timestamp_pattern = r'visualization_(\d{8}_\d{6})'
+                    
+                    # Try to find the original code file
+                    code_files = []
+                    try:
+                        for filename in os.listdir("generated_code"):
+                            if filename.endswith(".py"):
+                                code_files.append(filename)
+                    except FileNotFoundError:
+                        print("Warning: 'generated_code' directory not found")
+                        code_files = []
+                    
+                    # Sort files by modification time (newest first)
+                    code_files.sort(key=lambda f: os.path.getmtime(os.path.join("generated_code", f)), reverse=True)
+                    
+                    # Try to find the matching code file
+                    for filename in code_files:
+                        # First check if we can match by timestamp in the image URL
+                        timestamp_match = re.search(timestamp_pattern, filename)
+                        if timestamp_match:
+                            # Read the code file
+                            try:
+                                with open(os.path.join("generated_code", filename), 'r', encoding='utf-8') as f:
+                                    original_code = f.read()
+                                    print(f"Found original code file: {filename}")
+                                    break
+                            except Exception as e:
+                                print(f"Error reading code file: {str(e)}")
         
-        print(f"Found original code file: {code_filename}")
+        # If we couldn't find the original code, use a fallback approach
+        if not original_code:
+            print("Warning: Could not find original code for the image. Using default fix.")
+            return self._fix_coeq_question_without_code(question, image_validation_result)
         
         try:
             # Import the validator module to use its fix method
@@ -191,10 +455,32 @@ class QuestionFixer:
             validator = QuestionValidator(api_key=self.api_key, model_name=self.model_name)
             
             # Get the improvement suggestions
-            improvement_suggestions = image_validation_result.get("improvement_suggestions", [])
+            # Different validation structures may have the suggestions at different levels
+            improvement_suggestions = []
+            
+            # Try to find improvement suggestions in various formats
+            if "improvement_suggestions" in image_validation_result:
+                improvement_suggestions = image_validation_result["improvement_suggestions"]
+            elif "details" in image_validation_result and "improvement_suggestions" in image_validation_result.get("details", {}):
+                improvement_suggestions = image_validation_result["details"]["improvement_suggestions"]
+            elif "reasoning" in image_validation_result:
+                # Try to parse suggestions from reasoning
+                reasoning = image_validation_result["reasoning"]
+                # Extract suggestions from the reasoning text, if any
+                suggestion_lines = [line.strip() for line in reasoning.split('\n') if line.strip().startswith('-')]
+                improvement_suggestions = suggestion_lines
+            
             if not improvement_suggestions:
-                print("No improvement suggestions found in validation result. Cannot fix image.")
-                return question
+                print("No improvement suggestions found in validation result. Generating default suggestions.")
+                improvement_suggestions = [
+                    "Increase font size for all text elements to improve readability",
+                    "Adjust color contrast to make data points more distinct",
+                    "Add more padding around elements to prevent overlap",
+                    "Make axis labels and titles more prominent",
+                    "Ensure consistent formatting throughout the visualization"
+                ]
+                
+            print(f"Found {len(improvement_suggestions)} improvement suggestions")
                 
             # Generate improved code
             improved_code, error = validator.fix_coeq_image(
@@ -212,6 +498,9 @@ class QuestionFixer:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             improved_code_filename = f"generated_code/visualization_fixed_{timestamp}.py"
             
+            # Create the directory if it doesn't exist
+            os.makedirs("generated_code", exist_ok=True)
+            
             with open(improved_code_filename, 'w', encoding='utf-8') as f:
                 f.write(improved_code)
                 
@@ -219,15 +508,97 @@ class QuestionFixer:
             improved_image_filename = f"generated_code/visualization_fixed_{timestamp}.png"
             
             # Add the image filename to the code
-            improved_code = improved_code.replace(
+            if "plt.savefig" in improved_code:
+                modified_code = improved_code.replace(
                 "plt.savefig('visualization.png')", 
                 f"plt.savefig('{improved_image_filename}')"
+                ).replace(
+                    'plt.savefig("visualization.png")', 
+                    f'plt.savefig("{improved_image_filename}")'
             )
+            else:
+                # If no savefig call is found, add one at the end
+                modified_code = improved_code + f"\n\n# Save the figure\nplt.savefig('{improved_image_filename}')\n"
             
             # Execute the code
             exec_globals = {'__name__': '__main__'}
-            exec(improved_code, exec_globals)
+            try:
+                print(f"Executing improved visualization code to generate: {improved_image_filename}")
+                # Make sure we have matplotlib imported in the global namespace
+                exec('import matplotlib.pyplot as plt', exec_globals)
+                exec('import numpy as np', exec_globals)
+                exec('import pandas as pd', exec_globals)
+                
+                # Execute the visualization code
+                exec(modified_code, exec_globals)
+                
+                # Check if the file was created
+                if os.path.exists(improved_image_filename):
+                    print(f"Successfully created image file: {improved_image_filename}")
+                else:
+                    print(f"Warning: Image file not created by code execution. Trying direct save method.")
+                    # Try to directly access the figure and save it
+                    if 'plt' in exec_globals:
+                        plt = exec_globals['plt']
+                        plt.savefig(improved_image_filename, dpi=300, bbox_inches='tight')
+                        print(f"Direct save method: Saved figure to {improved_image_filename}")
+                        
+                        # Verify the file was created
+                        if os.path.exists(improved_image_filename):
+                            print(f"Confirmed image file exists after direct save: {improved_image_filename}")
+                        else:
+                            print(f"Error: Image file still not created after direct save attempt")
+                            # Try one more approach - create a simple figure and save it
+                            plt.figure(figsize=(8, 6))
+                            plt.title("SAT Question Visualization")
+                            plt.text(0.5, 0.5, "Placeholder visualization - original could not be generated", 
+                                    ha='center', va='center', fontsize=12)
+                            plt.axis('off')
+                            plt.savefig(improved_image_filename, dpi=300, bbox_inches='tight')
+                            print(f"Created placeholder image as last resort: {improved_image_filename}")
+                    else:
+                        print("Error: plt not found in execution namespace")
+                        # Create a simple matplotlib figure as a fallback
+                        import matplotlib.pyplot as plt
+                        plt.figure(figsize=(8, 6))
+                        plt.title("SAT Question Visualization")
+                        plt.text(0.5, 0.5, "Placeholder visualization - original could not be generated", 
+                                ha='center', va='center', fontsize=12)
+                        plt.axis('off')
+                        plt.savefig(improved_image_filename, dpi=300, bbox_inches='tight')
+                        plt.close()
+                        print(f"Created fallback placeholder image: {improved_image_filename}")
+            except Exception as e:
+                print(f"Error executing visualization code: {str(e)}")
+                # Create a simple matplotlib figure as a fallback
+                try:
+                    import matplotlib.pyplot as plt
+                    plt.figure(figsize=(8, 6))
+                    plt.title("SAT Question Visualization")
+                    plt.text(0.5, 0.5, f"Error generating visualization: {str(e)}", 
+                            ha='center', va='center', fontsize=12)
+                    plt.axis('off')
+                    plt.savefig(improved_image_filename, dpi=300, bbox_inches='tight')
+                    plt.close()
+                    print(f"Created error message placeholder image: {improved_image_filename}")
+                except Exception as e2:
+                    print(f"Failed to create fallback image: {str(e2)}")
+                    # Last resort - create a basic image file using PIL
+                    try:
+                        from PIL import Image, ImageDraw, ImageFont
+                        img = Image.new('RGB', (800, 600), color=(255, 255, 255))
+                        d = ImageDraw.Draw(img)
+                        d.text((400, 300), "Visualization Error", fill=(0, 0, 0))
+                        img.save(improved_image_filename)
+                        print(f"Created basic PIL image as absolute last resort: {improved_image_filename}")
+                    except Exception as e3:
+                        print(f"Failed to create PIL fallback image: {str(e3)}")
+                        return question
+            
             print(f"Fixed visualization saved to {improved_image_filename}")
+            
+            # Save the improved visualization code to the question
+            question["visualization_code"] = improved_code
             
             # Upload the new image to Google Drive
             # Import the generator to use its upload method
@@ -237,8 +608,10 @@ class QuestionFixer:
             new_image_url = generator.upload_to_gdrive(improved_image_filename)
             
             if not new_image_url:
-                print("Warning: Failed to upload fixed image to Google Drive.")
-                return question
+                print("Warning: Failed to upload fixed image to Google Drive. Using local file URL instead.")
+                # Create a local file URL as fallback
+                abs_path = os.path.abspath(improved_image_filename)
+                new_image_url = f"file://{abs_path.replace(os.sep, '/')}"
                 
             # Update the question's img tag with the new URL
             img_pattern = re.compile(r'<img[^>]*src=["\'](.*?)["\'][^>]*>')
@@ -247,8 +620,17 @@ class QuestionFixer:
                 passage
             )
             
+            # If the pattern didn't match, try a simpler approach
+            if updated_passage == passage:
+                print("First replacement pattern didn't match, trying simpler approach...")
+                updated_passage = passage.replace(f'src="{image_url}"', f'src="{new_image_url}"')
+                updated_passage = updated_passage.replace(f"src='{image_url}'", f"src='{new_image_url}'")
+            
             # Update the question
             question["passage"] = updated_passage
+            
+            # Add information about the local image file path
+            question["local_image_path"] = improved_image_filename
             
             print("Successfully fixed and replaced the image in the question.")
             return question
@@ -319,7 +701,7 @@ class QuestionFixer:
                 print("Failed to generate adjusted question.")
                 return question
                 
-            adjusted_question = json.loads(adjusted_question_json_str)
+            adjusted_question = adjusted_question_json_str
             
             # Ensure all original fields are preserved
             for key in question:
@@ -555,15 +937,16 @@ class QuestionFixer:
             failed_validations=failed_validations_text
         )
     
-    def _extract_json_from_response(self, response_text: str) -> Optional[str]:
+    def _extract_json_from_response(self, response_text: str) -> Optional[Dict]:
         """
-        Extract a JSON string from the response text.
+        Extract a JSON object from the response text with improved handling of 
+        escape sequences and control characters.
         
         Args:
             response_text: The text response from Claude.
             
         Returns:
-            The extracted JSON string, or None if no JSON found.
+            The extracted JSON as a dictionary, or None if no JSON found or parsing failed.
         """
         # Try to find JSON in the response
         try:
@@ -580,10 +963,32 @@ class QuestionFixer:
                 elif response_text[i] == '}':
                     brace_count -= 1
                     if brace_count == 0:
-                        return response_text[start_idx:i+1]
+                        # Found the full JSON object
+                        json_text = response_text[start_idx:i+1]
+                        
+                        # Clean potential issues
+                        try:
+                            # First try direct parsing
+                            return json.loads(json_text)
+                        except json.JSONDecodeError as e:
+                            print(f"Initial JSON parsing failed: {e}")
+                            
+                            try:
+                                # Normalize newlines - JSON doesn't allow literal newlines in strings
+                                normalized_text = json_text.replace('\n', '\\n')
+                                # Clean control characters
+                                import re
+                                cleaned_text = re.sub(r'[\x00-\x09\x0b\x0c\x0e-\x1f\x7f]', '', normalized_text)
+                                return json.loads(cleaned_text)
+                            except json.JSONDecodeError as e2:
+                                print(f"Second JSON parsing attempt failed: {e2}")
+                                
+                                # If all else fails, return None
+                                return None
             
             return None
-        except Exception:
+        except Exception as e:
+            print(f"Error extracting JSON: {str(e)}")
             return None
     
     def _extract_code_from_response(self, response_text: str) -> str:

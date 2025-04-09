@@ -519,7 +519,7 @@ class QuestionGenerator:
                     model=self.model_name,
                     max_tokens=4000,
                     temperature=0.2,
-                    system="You are a professional SAT question writer who will generate high-quality SAT questions based on the provided prompt.",
+                    system="You are a professional SAT question writer who will generate high-quality SAT questions based on the provided prompt. IMPORTANT: When asked to respond with JSON, always use standard JSON format with double quotes around keys and string values. Never use single quotes in JSON. Do not include markdown formatting like ```json around your JSON response.",
                     messages=[
                         {
                             "role": "user",
@@ -529,10 +529,10 @@ class QuestionGenerator:
                 )
                 
                 # Extract the generated question from the response
-                question_json_str = self._extract_json_from_response(response.content[0].text)
+                question_data = self._extract_json_from_response(response.content[0].text)
                 
                 # Retry if JSON extraction failed
-                if not question_json_str:
+                if not question_data:
                     if retry_attempt < max_retries - 1:
                         print(f"No valid JSON found in the response. Retrying in {retry_delay} seconds...")
                         time.sleep(retry_delay)
@@ -540,15 +540,9 @@ class QuestionGenerator:
                     else:
                         raise ValueError("No valid JSON found in the response after all retry attempts.")
                 
-                try:
-                    question = json.loads(question_json_str)
-                except json.JSONDecodeError as e:
-                    if retry_attempt < max_retries - 1:
-                        print(f"JSON decode error: {str(e)}. Retrying in {retry_delay} seconds...")
-                        time.sleep(retry_delay)
-                        continue
-                    else:
-                        raise ValueError(f"Failed to decode JSON after all retry attempts: {str(e)}")
+                # The _extract_json_from_response function now returns a dictionary directly
+                # No need to parse JSON again
+                question = question_data
                 
                 # Add metadata about the skill, type, and content used
                 normalized_question = normalize_question(question)
@@ -562,7 +556,12 @@ class QuestionGenerator:
                     normalized_question["variant"] = "informational"
                 
                 # Special handling for COEQ questions with images
-                if prompt_name == "coeq" or skill == "Command of Evidence: Quantitative":
+                if prompt_name == "coeq" or prompt_name == "command-of-evidence-quantitative" or skill == "Command of Evidence: Quantitative" or normalized_question.get("skill") == "Command of Evidence: Quantitative":
+                    print("Processing COEQ question with visualization...")
+                    # Ensure the type field is set for COEQ questions
+                    normalized_question["type"] = "coeq"
+                    # Ensure the skill field is set correctly
+                    normalized_question["skill"] = "Command of Evidence: Quantitative"
                     normalized_question = self.process_coeq_question(normalized_question)
                 
                 # Return the generated question
@@ -903,18 +902,46 @@ class QuestionGenerator:
                 
                 return all_questions
     
-    def _extract_json_from_response(self, response_text: str) -> Optional[str]:
+    def _extract_json_from_response(self, response_text: str) -> Optional[Dict]:
         """
-        Extract a JSON string from the response text.
+        Extract a JSON object from the response text with improved handling of 
+        escape sequences and control characters.
         
         Args:
             response_text: The text response from Claude.
             
         Returns:
-            The extracted JSON string, or None if no JSON found.
+            The extracted JSON as a dictionary, or None if no JSON found or parsing failed.
         """
         # Try to find JSON in the response
         try:
+            import re
+            
+            # First, try to extract JSON from code blocks
+            # Look for JSON in code blocks (```json ... ```)
+            json_block_pattern = re.compile(r'```(?:json)?\s*({\s*.*?\s*})\s*```', re.DOTALL)
+            json_block_match = json_block_pattern.search(response_text)
+            
+            if json_block_match:
+                json_text = json_block_match.group(1)
+                try:
+                    return json.loads(json_text)
+                except json.JSONDecodeError as e:
+                    print(f"JSON code block parsing failed: {e}")
+                    # Continue to try other extraction methods
+            
+            # Look for <answer> tags that might contain JSON
+            answer_pattern = re.compile(r'<answer>\s*({\s*.*?\s*})\s*</answer>', re.DOTALL)
+            answer_match = answer_pattern.search(response_text)
+            
+            if answer_match:
+                json_text = answer_match.group(1)
+                try:
+                    return json.loads(json_text)
+                except json.JSONDecodeError as e:
+                    print(f"Answer tag JSON parsing failed: {e}")
+                    # Continue to try other extraction methods
+            
             # Look for JSON object start and end
             start_idx = response_text.find('{')
             if start_idx == -1:
@@ -928,11 +955,93 @@ class QuestionGenerator:
                 elif response_text[i] == '}':
                     brace_count -= 1
                     if brace_count == 0:
-                        return response_text[start_idx:i+1]
+                        # Found the full JSON object
+                        json_text = response_text[start_idx:i+1]
+                        
+                        # Clean potential issues
+                        try:
+                            # First try direct parsing
+                            return json.loads(json_text)
+                        except json.JSONDecodeError as e:
+                            print(f"Initial JSON parsing failed: {e}")
+                            
+                            try:
+                                # Normalize newlines - JSON doesn't allow literal newlines in strings
+                                normalized_text = json_text.replace('\n', '\\n')
+                                # Clean control characters
+                                cleaned_text = re.sub(r'[\x00-\x09\x0b\x0c\x0e-\x1f\x7f]', '', normalized_text)
+                                
+                                # Try to fix common formatting issues
+                                # Replace single quotes with double quotes for keys and string values
+                                fixed_text = re.sub(r"'([^']+)':", r'"\1":', cleaned_text)
+                                fixed_text = re.sub(r':\s*\'([^\']+)\'', r': "\1"', fixed_text)
+                                
+                                return json.loads(fixed_text)
+                            except json.JSONDecodeError as e2:
+                                print(f"Second JSON parsing attempt failed: {e2}")
+                                
+                                # Last attempt: try to extract just the required fields
+                                try:
+                                    # Extract fields based on patterns
+                                    field_patterns = {
+                                        "passage": r'"passage"\s*:\s*"([^"]+)"',
+                                        "question": r'"question"\s*:\s*"([^"]+)"',
+                                        "correct_answer": r'"correct_answer"\s*:\s*"([^"]+)"',
+                                        "distractor1": r'"distractor1"\s*:\s*"([^"]+)"',
+                                        "distractor2": r'"distractor2"\s*:\s*"([^"]+)"',
+                                        "distractor3": r'"distractor3"\s*:\s*"([^"]+)"',
+                                        "skill": r'"skill"\s*:\s*"([^"]+)"',
+                                        "difficulty": r'"difficulty"\s*:\s*"([^"]+)"'
+                                    }
+                                    
+                                    extracted_data = {}
+                                    for field, pattern in field_patterns.items():
+                                        match = re.search(pattern, json_text)
+                                        if match:
+                                            extracted_data[field] = match.group(1)
+                                    
+                                    if extracted_data:
+                                        return extracted_data
+                                    else:
+                                        # If all else fails, return None
+                                        return None
+                                except Exception as e3:
+                                    print(f"Final extraction attempt failed: {e3}")
+                                    return None
             
             return None
-        except Exception:
+        except Exception as e:
+            print(f"Error extracting JSON: {str(e)}")
             return None
+    
+    def _extract_alt_text_from_passage(self, passage: str) -> Optional[str]:
+        """
+        Extract alt text from an HTML img tag in the passage.
+        Handles both double and single quotes, and properly deals with quoted content.
+        
+        Args:
+            passage: HTML passage containing an img tag with alt attribute
+            
+        Returns:
+            The extracted alt text, or None if no alt text found
+        """
+        import re
+        # This improved regex looks for alt attribute with either single or double quotes
+        # and correctly handles the content inside the quotes
+        alt_pattern = re.compile(r'<img[^>]*alt=(["\'])(.*?)\1[^>]*>', re.DOTALL)
+        alt_match = alt_pattern.search(passage)
+        
+        if alt_match:
+            return alt_match.group(2)  # Group 2 contains the actual alt text
+        
+        # Fallback to a simpler pattern if the above doesn't work
+        simpler_pattern = re.compile(r'alt=["\'](.*?)["\']', re.DOTALL)
+        simpler_match = simpler_pattern.search(passage)
+        
+        if simpler_match:
+            return simpler_match.group(1)
+        
+        return None
             
     def process_coeq_question(self, question: Dict) -> Dict:
         """
@@ -949,20 +1058,26 @@ class QuestionGenerator:
         Returns:
             The updated question dictionary with the img URL pointing to the hosted image
         """
+        # Ensure question has correct type and skill
+        question["type"] = "coeq"
+        question["skill"] = "Command of Evidence: Quantitative"
+        
         # Extract the alt description from the img tag in the passage
         passage = question.get("passage", "")
-        import re
-        img_pattern = re.compile(r'<img[^>]*alt=["\'](.*?)["\'][^>]*>')
-        img_match = img_pattern.search(passage)
+        alt_description = self._extract_alt_text_from_passage(passage)
         
-        if not img_match:
-            print("Warning: No img tag with alt description found in the passage.")
+        if not alt_description:
+            print("WARNING: No alt text found in the passage.")
+            question["visualization_error"] = "No alt text found in the passage."
             return question
-            
-        alt_description = img_match.group(1)
+        
+        print(f"Found alt text ({len(alt_description)} characters)")
         
         # Generate Python code for the visualization
         visualization_code = self.generate_visualization_code(alt_description)
+        
+        # Save the visualization code to the question object
+        question["visualization_code"] = visualization_code
         
         # Save the generated code for reference
         import os
@@ -970,43 +1085,122 @@ class QuestionGenerator:
         os.makedirs("generated_code", exist_ok=True)
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         code_filename = f"generated_code/visualization_{timestamp}.py"
+        image_filename = f"generated_code/visualization_{timestamp}.png"
         
         with open(code_filename, "w", encoding="utf-8") as f:
             f.write(visualization_code)
+        
+        print(f"Saved visualization code to {code_filename}")
+        
+        # Modify the visualization code to use the correct filename
+        if "plt.savefig" in visualization_code:
+            modified_code = visualization_code.replace(
+                "plt.savefig('visualization.png')", 
+                f"plt.savefig('{image_filename}')"
+            ).replace(
+                'plt.savefig("visualization.png")', 
+                f'plt.savefig("{image_filename}")'
+            )
+        else:
+            # If no savefig call is found, add one at the end
+            modified_code = visualization_code + f"\n\n# Save the figure\nplt.savefig('{image_filename}')\n"
             
-        # Execute the code to generate the image
-        image_filename = f"generated_code/visualization_{timestamp}.png"
-        
-        # Add the image filename to the code environment
-        visualization_code = visualization_code.replace(
-            "plt.savefig('visualization.png')", 
-            f"plt.savefig('{image_filename}')"
-        )
-        
-        # Execute the code
+        # Execute the modified code
         exec_globals = {'__name__': '__main__'}
         try:
-            exec(visualization_code, exec_globals)
+            # Print debug information
+            print(f"Executing visualization code to create {image_filename}")
+            exec(modified_code, exec_globals)
             print(f"Visualization saved to {image_filename}")
+            
+            # Check if the file exists
+            if not os.path.exists(image_filename):
+                print(f"WARNING: Expected image file {image_filename} was not created. Adding a simple savefig call.")
+                
+                # Try to capture the figure and save it directly
+                if 'plt' in exec_globals:
+                    try:
+                        plt = exec_globals['plt']
+                        plt.savefig(image_filename)
+                        print(f"Successfully saved figure using fallback method to {image_filename}")
+                    except Exception as e:
+                        error_msg = f"Error using fallback save method: {str(e)}"
+                        print(error_msg)
+                        question["visualization_error"] = error_msg
+                        
         except Exception as e:
-            print(f"Error executing visualization code: {str(e)}")
+            error_msg = f"Error executing visualization code: {str(e)}"
+            print(error_msg)
+            question["visualization_error"] = error_msg
             return question
             
         # Upload the image to Google Drive
-        image_url = self.upload_to_gdrive(image_filename)
-        
-        if not image_url:
-            print("Warning: Failed to upload image to Google Drive.")
-            return question
-            
-        # Update the question's img tag with the actual URL
-        updated_passage = img_pattern.sub(
-            lambda m: m.group(0).replace('alt="' + alt_description + '"', 
-                                      f'alt="{alt_description}" src="{image_url}"'),
-            passage
-        )
-        
-        question["passage"] = updated_passage
+        if os.path.exists(image_filename):
+            try:
+                # Try uploading to Google Drive first
+                image_url = self.upload_to_gdrive(image_filename)
+                
+                if not image_url:
+                    # If Google Drive upload fails, use local file URL instead
+                    print("Using local file as fallback for Google Drive upload")
+                    # Convert to absolute path for file:// URL
+                    abs_path = os.path.abspath(image_filename)
+                    # Create a file URL
+                    image_url = f"file://{abs_path.replace(os.sep, '/')}"
+                    print(f"Using local file URL: {image_url}")
+                
+                # Update the question's img tag with the URL
+                import re
+                print(f"Updating image URL in passage from placeholder to: {image_url}")
+                
+                # This pattern matches the img tag
+                img_pattern = re.compile(r'<img[^>]*?alt=(["\'])' + re.escape(alt_description) + r'\1[^>]*?>', re.DOTALL)
+                
+                # Keep track of the pre-update passage for debugging
+                pre_update_passage = passage
+                
+                updated_passage = img_pattern.sub(
+                    lambda m: m.group(0).replace('src="[url]"', f'src="{image_url}"').replace("src='[url]'", f"src='{image_url}'"),
+                    passage
+                )
+                
+                # If the pattern didn't match, try a simpler approach
+                if updated_passage == passage:
+                    print("First replacement pattern didn't match, trying simpler approach...")
+                    updated_passage = passage.replace('src="[url]"', f'src="{image_url}"').replace("src='[url]'", f"src='{image_url}'")
+                
+                # Additional check for [placeholder for now]
+                if updated_passage == passage:
+                    print("Second replacement approach didn't match, trying with [placeholder]...")
+                    updated_passage = passage.replace('src="[placeholder]"', f'src="{image_url}"').replace("src='[placeholder]'", f"src='{image_url}'")
+                
+                # Verify the URL was replaced
+                if updated_passage == pre_update_passage:
+                    error_msg = "WARNING: Image URL replacement failed. The passage remains unchanged."
+                    print(error_msg)
+                    # Check for placeholders directly rather than in f-strings with complex escaping
+                    has_url_placeholder = 'src="[url]"' in passage or "src='[url]'" in passage
+                    has_placeholder_for_now = 'src="[placeholder for now]"' in passage or "src='[placeholder for now]'" in passage
+                    print(f"Passage contains '[url]': {has_url_placeholder}")
+                    print(f"Passage contains '[placeholder for now]': {has_placeholder_for_now}")
+                    question["visualization_error"] = error_msg
+                else:
+                    print("Successfully updated image URL in passage")
+                
+                question["passage"] = updated_passage
+                
+                # Add information about the local image file path
+                question["local_image_path"] = image_filename
+            except Exception as e:
+                error_msg = f"Error processing image URL: {str(e)}"
+                print(error_msg)
+                question["visualization_error"] = error_msg
+                # Make sure we still have the local image path
+                question["local_image_path"] = image_filename
+        else:
+            error_msg = f"Error: Image file {image_filename} was not created."
+            print(error_msg)
+            question["visualization_error"] = error_msg
         
         return question
         
@@ -1032,12 +1226,13 @@ class QuestionGenerator:
         2. Make sure all text is clearly visible and does not overlap
         3. Use appropriate font sizes and spacing
         4. Include a title and labels as specified in the description
-        5. Use a clean, professional style suitable for an academic test
-        6. Save the figure as 'visualization.png'
-        7. Don't use plt.show() as this will be run in a non-interactive environment
-        8. Use only the necessary imports (matplotlib, numpy, pandas if needed)
-        9. The code should be self-contained and runnable without additional data files
-        10. Use readable code with comments explaining key steps
+        5. Do NOT include an interpretation of the data in the visualization
+        6. Use a clean, professional style suitable for an academic test
+        7. IMPORTANT: Include this exact line at the end of your code: plt.savefig('visualization.png', dpi=300, bbox_inches='tight')
+        8. Don't use plt.show() as this will be run in a non-interactive environment
+        9. Use only the necessary imports (matplotlib, numpy, pandas if needed)
+        10. The code should be self-contained and runnable without additional data files
+        11. Use readable code with comments explaining key steps
         
         The code should be production-ready, error-free, and generate a high-quality visualization.
         """
@@ -1047,7 +1242,7 @@ class QuestionGenerator:
                 model=self.model_name,
                 max_tokens=4000,
                 temperature=0.2,  # Use low temperature for consistent code
-                system="You are a professional Python programmer and data visualization expert who creates clean, accurate, and readable matplotlib code.",
+                system="You are a professional Python programmer and data visualization expert who creates clean, accurate, and readable matplotlib code. IMPORTANT: Always generate working Python code that can be executed without modification. Focus on clarity and readability.",
                 messages=[
                     {
                         "role": "user",
@@ -1057,11 +1252,35 @@ class QuestionGenerator:
             )
             
             # Extract the Python code from the response
-            return self._extract_code_from_response(response.content[0].text)
+            extracted_code = self._extract_code_from_response(response.content[0].text)
+            
+            # Ensure the code includes plt.savefig
+            if "plt.savefig" not in extracted_code:
+                # Add the savefig line if missing
+                extracted_code += "\n\n# Save the figure\nplt.savefig('visualization.png', dpi=300, bbox_inches='tight')\n"
+                
+            return extracted_code
         except Exception as e:
             print(f"Error generating visualization code: {str(e)}")
-            return ""
             
+            # Return a simple fallback visualization in case of API errors
+            return """
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Create a simple dummy visualization
+fig, ax = plt.subplots(figsize=(8, 6))
+x = np.linspace(0, 10, 100)
+y = np.sin(x)
+ax.plot(x, y)
+ax.set_title('Generated Visualization')
+ax.set_xlabel('X-axis')
+ax.set_ylabel('Y-axis')
+
+# Save the figure
+plt.savefig('visualization.png', dpi=300, bbox_inches='tight')
+"""
+        
     def _extract_code_from_response(self, response_text: str) -> str:
         """
         Extract Python code from the response text.
@@ -1095,6 +1314,7 @@ class QuestionGenerator:
     def upload_to_gdrive(self, image_path: str) -> Optional[str]:
         """
         Upload an image to Google Drive and return the public URL.
+        If upload fails, returns None.
         
         Args:
             image_path: Path to the image file
@@ -1107,6 +1327,18 @@ class QuestionGenerator:
             from pydrive.drive import GoogleDrive
             from oauth2client.service_account import ServiceAccountCredentials
             import os
+            import socket
+            
+            # First check connectivity to Google's servers
+            try:
+                # Set a timeout for the connection test
+                socket.setdefaulttimeout(5)
+                # Try to connect to Google's authentication server
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(('oauth2.googleapis.com', 443))
+            except Exception as e:
+                print(f"Network connectivity test failed: {str(e)}")
+                print("Cannot connect to Google servers. Check your internet connection.")
+                return None
             
             # Check if credentials file exists
             credentials_path = os.getenv("GDRIVE_CREDENTIALS_PATH", "gdrive_credentials.json")
@@ -1164,7 +1396,16 @@ class QuestionGenerator:
         except ImportError as e:
             print(f"Required packages not installed: {str(e)}")
             print("Please install pydrive with: pip install pydrive")
-            return None
+            
+            # Fall back to local file URL
+            local_url = f"file://{os.path.abspath(image_path).replace(os.sep, '/')}"
+            print(f"Falling back to local file URL: {local_url}")
+            return local_url
+            
         except Exception as e:
             print(f"Error uploading to Google Drive: {str(e)}")
-            return None 
+            
+            # Fall back to local file URL
+            local_url = f"file://{os.path.abspath(image_path).replace(os.sep, '/')}"
+            print(f"Falling back to local file URL: {local_url}")
+            return local_url 

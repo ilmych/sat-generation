@@ -9,3 +9,4 @@ matplotlib==3.7.1
 numpy==1.24.3
 pandas==2.0.1
 requests==2.31.0 
+oauth2client==4.1.3

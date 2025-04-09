@@ -8,6 +8,7 @@ import time
 from typing import Dict, List, Any, Optional, Union, Tuple
 from anthropic import Anthropic
 from tqdm import tqdm
+from PIL import Image, ImageDraw, ImageFont
 
 from src.utils import get_prompt_by_name
 
@@ -205,10 +206,12 @@ class QuestionValidator:
                 }
         
         # Special handling for COEQ images
-        if question_type in ["coeq", "command-of-evidence-quantitative"]:
-            # If the question contains visualization code, validate it
-            if "visualization_code" in question:
-                try:
+        if question_type in ["coeq", "command-of-evidence-quantitative"] or question.get("skill", "") == "Command of Evidence: Quantitative":
+            try:
+                # Check if the passage contains an image tag
+                passage = question.get("passage", "")
+                if "<img" in passage:
+                    # Validate any COEQ question that has an image
                     image_result = self.validate_coeq_image(question)
                     
                     # Ensure result is a dictionary
@@ -224,12 +227,19 @@ class QuestionValidator:
                         }
                     
                     results["coeq_image"] = image_result
-                except Exception as e:
-                    print(f"Error validating COEQ image: {str(e)}")
+                else:
+                    print("COEQ question missing image tag in passage")
                     results["coeq_image"] = {
                         "score": 0,
-                        "reasoning": f"Error during COEQ image validation: {str(e)}"
+                        "reasoning": "COEQ question must contain an image tag in the passage",
+                        "error": True
                     }
+            except Exception as e:
+                print(f"Error validating COEQ image: {str(e)}")
+                results["coeq_image"] = {
+                    "score": 0,
+                    "reasoning": f"Error during COEQ image validation: {str(e)}"
+                }
         
         # Check if all validators have a score of at least 1
         # Make sure to safely extract scores from results
@@ -431,7 +441,7 @@ class QuestionValidator:
                     model=self.model_name,
                     max_tokens=1000,
                     temperature=0.0,  # Use zero temperature for consistent validation
-                    system="You are a professional SAT question validator who ensures the quality of SAT questions.",
+                    system="You are a professional SAT question validator who ensures the quality of SAT questions. IMPORTANT: When asked to respond with JSON, always use standard JSON format with double quotes around keys and string values. Never use single quotes in JSON. Do not include markdown formatting like ```json around your JSON response.",
                     messages=[
                         {
                             "role": "user",
@@ -441,7 +451,7 @@ class QuestionValidator:
                 )
                 
                 # Extract the JSON result from the response
-                validation_json_str = self._extract_json_from_response(response.content[0].text)
+                validation_json_str = self._extract_json_from_response(response.content[0].text, prompt_name)
                 
                 # Retry if JSON extraction failed
                 if not validation_json_str:
@@ -455,28 +465,17 @@ class QuestionValidator:
                             "reasoning": "Failed to extract validation result from response after all retry attempts."
                         }
                 
-                try:
-                    validation_result = json.loads(validation_json_str)
-                    
-                    # Ensure the validation result has the required fields
-                    if "score" not in validation_result:
-                        validation_result["score"] = 0
-                    if "reasoning" not in validation_result:
-                        validation_result["reasoning"] = "No reasoning provided by validator."
-                    
-                    return validation_result
-                    
-                except json.JSONDecodeError as e:
-                    if retry_attempt < max_retries - 1:
-                        print(f"JSON decode error: {str(e)}. Retrying in {retry_delay} seconds...")
-                        time.sleep(retry_delay)
-                        continue
-                    else:
-                        return {
-                            "score": 0,
-                            "reasoning": f"Failed to decode validation result JSON: {str(e)}"
-                        }
+                # The _extract_json_from_response function now returns a dictionary directly
+                validation_result = validation_json_str
                 
+                # Ensure the validation result has the required fields
+                if "score" not in validation_result:
+                    validation_result["score"] = 0
+                if "reasoning" not in validation_result:
+                    validation_result["reasoning"] = "No reasoning provided by validator."
+                
+                return validation_result
+                    
             except Exception as e:
                 if retry_attempt < max_retries - 1:
                     # Determine if it's a rate limit error
@@ -565,7 +564,7 @@ class QuestionValidator:
                     model=self.model_name,
                     max_tokens=1000,
                     temperature=0.0,
-                    system="You are a professional SAT question validator specializing in assessing the plausibility of distractors.",
+                    system="You are a professional SAT question validator specializing in assessing the plausibility of distractors. IMPORTANT: When asked to respond with JSON, always use standard JSON format with double quotes around keys and string values. Never use single quotes in JSON. Do not include markdown formatting like ```json around your JSON response.",
                     messages=[
                         {
                             "role": "user",
@@ -575,14 +574,15 @@ class QuestionValidator:
                 )
                 
                 # Extract the result
-                validation_json_str = self._extract_json_from_response(response.content[0].text)
+                validation_json_str = self._extract_json_from_response(response.content[0].text, "plausibility_for_distractor_" + str(i+1))
                 if not validation_json_str:
                     distractor_results.append(0)  # Count as fail if we can't extract result
                     detailed_reasoning.append(f"Distractor {i+1}: Failed to extract result")
                     print(f"    - Failed to extract result")
                     continue
                     
-                validation_result = json.loads(validation_json_str)
+                # The _extract_json_from_response function now returns a dictionary directly
+                validation_result = validation_json_str
                 score = validation_result.get("score", 0)
                 reasoning = validation_result.get("reasoning", "No reasoning provided")
                 
@@ -619,26 +619,48 @@ class QuestionValidator:
             "distractor_results": distractor_results
         }
     
-    def _extract_json_from_response(self, response_text: str) -> Optional[str]:
-        """
-        Extract a JSON string from the response text.
+    def _extract_json_from_response(self, response_text: str, prompt_name: str = "unknown") -> Optional[Dict]:
+        """Extract a JSON object from the response text.
         
         Args:
             response_text: The text response from Claude.
+            prompt_name: The name of the prompt being processed (for debugging).
             
         Returns:
-            The extracted JSON string, or None if no JSON found.
+            The extracted JSON as a dictionary, or None if no JSON found or parsing failed.
         """
+        print(f"\n===== RESPONSE TEXT FOR {prompt_name} =====")
+        print(response_text[:200])  # Print first 200 chars of response
+        print("..." if len(response_text) > 200 else "")
+        print(f"===== END RESPONSE TEXT =====\n")
         # Try to find JSON in the response
         try:
-            # First, look for <answer> tags (some prompts use these)
-            start_tag = "<answer>"
-            end_tag = "</answer>"
-            if start_tag in response_text and end_tag in response_text:
-                start_idx = response_text.find(start_tag) + len(start_tag)
-                end_idx = response_text.find(end_tag)
-                if start_idx < end_idx:
-                    return response_text[start_idx:end_idx].strip()
+            import re
+            
+            # First, try to extract JSON from code blocks
+            # Look for JSON in code blocks (```json ... ```)
+            json_block_pattern = re.compile(r'```(?:json)?\s*({\s*.*?\s*})\s*```', re.DOTALL)
+            json_block_match = json_block_pattern.search(response_text)
+            
+            if json_block_match:
+                json_text = json_block_match.group(1)
+                try:
+                    return json.loads(json_text)
+                except json.JSONDecodeError as e:
+                    print(f"JSON code block parsing failed: {e}")
+                    # Continue to try other extraction methods
+            
+            # Look for <answer> tags that might contain JSON
+            answer_pattern = re.compile(r'<answer>\s*({\s*.*?\s*})\s*</answer>', re.DOTALL)
+            answer_match = answer_pattern.search(response_text)
+            
+            if answer_match:
+                json_text = answer_match.group(1)
+                try:
+                    return json.loads(json_text)
+                except json.JSONDecodeError as e:
+                    print(f"Answer tag JSON parsing failed: {e}")
+                    # Continue to try other extraction methods
             
             # Otherwise, look for JSON object start and end
             start_idx = response_text.find('{')
@@ -653,10 +675,53 @@ class QuestionValidator:
                 elif response_text[i] == '}':
                     brace_count -= 1
                     if brace_count == 0:
-                        return response_text[start_idx:i+1]
+                        # Found the full JSON object
+                        json_text = response_text[start_idx:i+1]
+                        
+                        # Clean potential issues
+                        try:
+                            # First try direct parsing
+                            return json.loads(json_text)
+                        except json.JSONDecodeError as e:
+                            print(f"Initial JSON parsing failed: {e}")
+                            
+                            try:
+                                # Normalize newlines - JSON doesn't allow literal newlines in strings
+                                normalized_text = json_text.replace('\n', '\\n')
+                                # Clean control characters
+                                cleaned_text = re.sub(r'[\x00-\x09\x0b\x0c\x0e-\x1f\x7f]', '', normalized_text)
+                                
+                                # Try to fix common formatting issues
+                                # Replace single quotes with double quotes for keys and string values
+                                fixed_text = re.sub(r"'([^']+)':", r'"\1":', cleaned_text)
+                                fixed_text = re.sub(r':\s*\'([^\']+)\'', r': "\1"', fixed_text)
+                                
+                                return json.loads(fixed_text)
+                            except json.JSONDecodeError as e2:
+                                print(f"Second JSON parsing attempt failed: {e2}")
+                                
+                                # Last attempt: try to extract just the score and reasoning
+                                try:
+                                    # Look for score pattern (e.g., "score": 1)
+                                    score_match = re.search(r'"score"\s*:\s*(\d+)', json_text)
+                                    # Look for reasoning pattern (e.g., "reasoning": "Some text")
+                                    reasoning_match = re.search(r'"reasoning"\s*:\s*"([^"]+)"', json_text)
+                                    
+                                    if score_match and reasoning_match:
+                                        return {
+                                            "score": int(score_match.group(1)),
+                                            "reasoning": reasoning_match.group(1)
+                                        }
+                                    else:
+                                        # If all else fails, return None
+                                        return None
+                                except Exception as e3:
+                                    print(f"Final extraction attempt failed: {e3}")
+                                    return None
             
             return None
-        except Exception:
+        except Exception as e:
+            print(f"Error extracting JSON: {str(e)}")
             return None
 
     def validate_coeq_image(self, question: Dict) -> Dict:
@@ -678,6 +743,7 @@ class QuestionValidator:
         img_match = img_pattern.search(passage)
         
         if not img_match:
+            print("ERROR: No image URL found in the question passage.")
             return {
                 "score": 0,
                 "reasoning": "No image URL found in the question passage.",
@@ -687,51 +753,179 @@ class QuestionValidator:
         image_url = img_match.group(1)
         print(f"Validating image: {image_url}")
         
-        # Download the image to get its binary content
-        try:
-            import requests
-            response = requests.get(image_url)
+        # Check if the URL is still a placeholder (hasn't been replaced)
+        if image_url == "[url]" or image_url == "[placeholder for now]":
+            print("ERROR: Image URL is still a placeholder and has not been replaced.")
+            return {
+                "score": 0,
+                "reasoning": "The image URL is still a placeholder '[url]'. The URL has not been replaced with a valid image URL.",
+                "error": True
+            }
             
-            if response.status_code != 200:
+        # Handle local file URLs differently
+        if image_url.startswith("file://"):
+            print(f"Detected local file URL: {image_url}")
+            local_path = image_url.replace("file://", "")
+            
+            # Convert from URL format to local path format
+            import os
+            if os.name == 'nt':  # Windows
+                # Handle Windows paths
+                if local_path.startswith("/"):
+                    local_path = local_path[1:]  # Remove leading slash
+                local_path = local_path.replace("/", "\\")
+            
+            print(f"Checking if local file exists at: {local_path}")
+            
+            if not os.path.exists(local_path):
+                print(f"ERROR: Local image file not found at: {local_path}")
                 return {
                     "score": 0,
-                    "reasoning": f"Failed to download image: HTTP status {response.status_code}",
+                    "reasoning": f"Local image file not found at: {local_path}",
                     "error": True
                 }
                 
-            image_data = response.content
+            # If we have a local file, check if it's valid
+            try:
+                from PIL import Image
+                import io
                 
-            # Define the validation prompt for Claude Vision
-            vision_prompt = """
-            You are evaluating a data visualization for an SAT quantitative evidence question. 
-            
-            Focus ONLY on the readability and clarity of the visualization:
-            1. Can all text be clearly read? (labels, titles, legends, axis values)
-            2. Is there any overlap of text or visual elements?
-            3. Are the data points, bars, lines, or other visualization elements clearly visible?
-            4. Is the contrast sufficient for all elements to be distinguished?
-            5. Would students be able to extract the information needed from this visualization?
-            
-            Provide your assessment in the following JSON format:
-            
-            ```json
-            {
-                "score": 0 or 1 (0 = fails readability check, 1 = passes readability check),
-                "reasoning": "Detailed explanation of your assessment, listing all readability issues found or confirming clear readability",
-                "improvement_suggestions": [
-                    "Specific technical suggestion 1",
-                    "Specific technical suggestion 2",
-                    ...
-                ]
-            }
-            ```
-            
-            The improvement_suggestions should be specific, actionable changes to the matplotlib code that would fix the readability issues.
-            Only include improvement_suggestions if the score is 0 (fails).
-            If the score is 1 (passes), leave improvement_suggestions as an empty list.
-            """
-            
-            # Call the Anthropic API with vision capability
+                print(f"Attempting to open image file: {local_path}")
+                # Check for file existence again
+                if not os.path.exists(local_path):
+                    print(f"ERROR: File does not exist at {local_path}")
+                    # Try to find the file with a different extension
+                    for ext in ['.png', '.jpg', '.jpeg', '.gif']:
+                        potential_path = os.path.splitext(local_path)[0] + ext
+                        if os.path.exists(potential_path):
+                            print(f"Found file with different extension: {potential_path}")
+                            local_path = potential_path
+                            break
+                
+                if os.path.exists(local_path):
+                    try:
+                        # Open the image to verify it's valid
+                        img = Image.open(local_path)
+                        print(f"Successfully opened image file: {local_path}")
+                        
+                        # Try to verify the image
+                        try:
+                            img.verify()  # Verify it's a valid image
+                            print("Image verification passed")
+                        except Exception as e:
+                            print(f"Warning: Image verification failed: {str(e)}")
+                            # Continue anyway, the file exists
+                        
+                        # Re-open the image (verify closes the file)
+                        img = Image.open(local_path)
+                        print(f"Image dimensions: {img.width}x{img.height}, Format: {img.format}")
+                        
+                        # Convert to bytes for API call
+                        img_byte_arr = io.BytesIO()
+                        img.save(img_byte_arr, format=img.format if img.format else 'PNG')
+                        image_data = img_byte_arr.getvalue()
+                        
+                        print(f"Successfully loaded local image file: {local_path}")
+                    except Exception as e:
+                        print(f"ERROR: Failed to process image with PIL: {str(e)}")
+                        # Try using a simple file read as fallback
+                        print("Trying fallback method to read image file")
+                        with open(local_path, 'rb') as f:
+                            image_data = f.read()
+                        print(f"Read {len(image_data)} bytes from image file using fallback method")
+                else:
+                    # Create a simple image as a placeholder
+                    print("Creating placeholder image for validation")
+                    img = Image.new('RGB', (800, 600), color=(255, 255, 255))
+                    d = ImageDraw.Draw(img)
+                    try:
+                        font = ImageFont.load_default()
+                        d.text((400, 300), "Image Not Found", fill=(0, 0, 0), font=font, anchor="mm")
+                    except:
+                        d.text((400, 300), "Image Not Found", fill=(0, 0, 0))
+                    
+                    img_byte_arr = io.BytesIO()
+                    img.save(img_byte_arr, format='PNG')
+                    image_data = img_byte_arr.getvalue()
+                    print("Created and loaded placeholder image")
+                    # Return an error since the original file doesn't exist
+                    return {
+                        "score": 0,
+                        "reasoning": f"Local image file not found at: {local_path}. Using placeholder for validation.",
+                        "improvement_suggestions": [
+                            "Fix image path or regenerate visualization",
+                            "Ensure image file is created properly when generating visualizations"
+                        ],
+                        "error": True
+                    }
+            except Exception as e:
+                print(f"ERROR: Failed to load local image file: {str(e)}")
+                return {
+                    "score": 0,
+                    "reasoning": f"Failed to load local image file: {str(e)}",
+                    "improvement_suggestions": [
+                        "Fix image path or regenerate visualization",
+                        "Ensure image file is created properly when generating visualizations"
+                    ],
+                    "error": True
+                }
+        else:
+            # Download the image to get its binary content
+            try:
+                import requests
+                print(f"Downloading image from URL: {image_url}")
+                response = requests.get(image_url)
+                
+                if response.status_code != 200:
+                    print(f"ERROR: Failed to download image: HTTP status {response.status_code}")
+                    return {
+                        "score": 0,
+                        "reasoning": f"Failed to download image: HTTP status {response.status_code}",
+                        "error": True
+                    }
+                    
+                image_data = response.content
+                print(f"Successfully downloaded image: {len(image_data)} bytes")
+            except Exception as e:
+                print(f"ERROR: Failed to download image: {str(e)}")
+                return {
+                    "score": 0,
+                    "reasoning": f"Failed to download image: {str(e)}",
+                    "error": True
+                }
+        
+        # Define the validation prompt for Claude Vision
+        vision_prompt = """
+        You are evaluating a data visualization for an SAT quantitative evidence question. 
+        
+        Focus ONLY on the readability and clarity of the visualization:
+        1. Can all text be clearly read? (labels, titles, legends, axis values)
+        2. Is there any overlap of text or visual elements?
+        3. Are the data points, bars, lines, or other visualization elements clearly visible?
+        4. Is the contrast sufficient for all elements to be distinguished?
+        5. Would students be able to extract the information needed from this visualization?
+        
+        Provide your assessment in the following JSON format:
+        
+        ```json
+        {
+            "score": 0 or 1 (0 = fails readability check, 1 = passes readability check),
+            "reasoning": "Detailed explanation of your assessment, listing all readability issues found or confirming clear readability",
+            "improvement_suggestions": [
+                "Specific technical suggestion 1",
+                "Specific technical suggestion 2",
+                ...
+            ]
+        }
+        ```
+        
+        The improvement_suggestions should be specific, actionable changes to the matplotlib code that would fix the readability issues.
+        Only include improvement_suggestions if the score is 0 (fails).
+        If the score is 1 (passes), leave improvement_suggestions as an empty list.
+        """
+        
+        # Call the Anthropic API with vision capability
+        try:
             import base64
             
             # Convert image data to base64
@@ -753,12 +947,14 @@ class QuestionValidator:
                 }
             ]
             
+            print("Calling Claude Vision API to evaluate image...")
+            
             # Call the API with image for validation
             response = self.client.messages.create(
                 model="claude-3-opus-20240229",  # Use a model with vision capabilities
                 max_tokens=1500,
                 temperature=0.0,
-                system="You are a professional data visualization expert evaluating readability of visualizations for educational testing.",
+                system="You are a professional data visualization expert evaluating readability of visualizations for educational testing. IMPORTANT: When asked to respond with JSON, always use standard JSON format with double quotes around keys and string values. Never use single quotes in JSON. Do not include markdown formatting like ```json around your JSON response.",
                 messages=[
                     {
                         "role": "user",
@@ -767,16 +963,20 @@ class QuestionValidator:
                 ]
             )
             
+            print("Claude Vision API response received.")
+            
             # Extract the JSON result from the response
-            validation_json_str = self._extract_json_from_response(response.content[0].text)
+            validation_json_str = self._extract_json_from_response(response.content[0].text, "coeq_image_validation")
             if not validation_json_str:
+                print("ERROR: Failed to extract image validation result from Claude Vision.")
                 return {
                     "score": 0,
                     "reasoning": "Failed to extract image validation result from Claude Vision.",
                     "error": True
                 }
                 
-            validation_result = json.loads(validation_json_str)
+            # The _extract_json_from_response function now returns a dictionary directly
+            validation_result = validation_json_str
             
             # Ensure we have the required fields
             if "score" not in validation_result:
@@ -787,17 +987,87 @@ class QuestionValidator:
                 validation_result["improvement_suggestions"] = []
                 
             # Log the result
-            print(f"  - Image validation result: {'PASS' if validation_result['score'] == 1 else 'FAIL'}")
+            print(f"Image validation result: {'PASS' if validation_result['score'] == 1 else 'FAIL'}")
             if validation_result["score"] == 0 and validation_result["improvement_suggestions"]:
-                print(f"  - Improvement suggestions: {len(validation_result['improvement_suggestions'])} suggestion(s) provided")
+                print(f"Improvement suggestions: {len(validation_result['improvement_suggestions'])} suggestion(s) provided")
                 
             return validation_result
-            
         except Exception as e:
+            print(f"ERROR: Error during image validation: {str(e)}")
             return {
                 "score": 0,
                 "reasoning": f"Error during image validation: {str(e)}",
                 "error": True
+            }
+            
+    def validate_coeq_image_only(self, question: Dict) -> Dict:
+        """
+        Validate only the image part of a COEQ question, skipping all other validations.
+        
+        Args:
+            question: The question dictionary to validate.
+            
+        Returns:
+            A dictionary with only the image validation result.
+        """
+        print(f"\nValidating only the image for COEQ question: {question.get('question', '')[:50]}...")
+        
+        try:
+            # Check if the passage contains an image tag
+            passage = question.get("passage", "")
+            if "<img" not in passage:
+                print("COEQ question missing image tag in passage")
+                return {
+                    "passed": False,
+                    "overall_score": 0,
+                    "details": {
+                        "coeq_image": {
+                            "score": 0,
+                            "reasoning": "COEQ question must contain an image tag in the passage",
+                            "error": True
+                        }
+                    }
+                }
+            
+            # Validate the image
+            image_result = self.validate_coeq_image(question)
+            
+            # Ensure result is a dictionary
+            if isinstance(image_result, bool):
+                image_result = {
+                    "score": 1 if image_result else 0,
+                    "reasoning": f"Image validation {'passed' if image_result else 'failed'}"
+                }
+            elif not isinstance(image_result, dict):
+                image_result = {
+                    "score": 0,
+                    "reasoning": f"Unexpected image validation result type: {type(image_result)}"
+                }
+            
+            # Construct the full validation result with just the image validation
+            passed = image_result.get("score", 0) >= 1
+            validation_result = {
+                "passed": passed,
+                "overall_score": 1 if passed else 0,
+                "details": {
+                    "coeq_image": image_result
+                }
+            }
+            
+            return validation_result
+            
+        except Exception as e:
+            print(f"Error validating COEQ image: {str(e)}")
+            return {
+                "passed": False,
+                "overall_score": 0,
+                "details": {
+                    "coeq_image": {
+                        "score": 0,
+                        "reasoning": f"Error during COEQ image validation: {str(e)}",
+                        "error": True
+                    }
+                }
             }
             
     def fix_coeq_image(self, question: Dict, original_code: str, improvement_suggestions: List[str]) -> Tuple[str, Optional[str]]:
@@ -853,7 +1123,7 @@ class QuestionValidator:
                 model=self.model_name,
                 max_tokens=4000,
                 temperature=0.2,
-                system="You are an expert data visualization specialist with deep knowledge of matplotlib and Python. You create clear, readable, and accessible visualizations.",
+                system="You are an expert data visualization specialist with deep knowledge of matplotlib and Python. You create clear, readable, and accessible visualizations. IMPORTANT: Always use standard Python code formatting without unnecessary comments.",
                 messages=[
                     {
                         "role": "user",
@@ -956,7 +1226,7 @@ Here is the question to explain:
                     model="claude-3-5-sonnet-20241022",  # Use Claude 3.5 Sonnet for explanations
                     max_tokens=2000,
                     temperature=0.0,  # Use temperature 0 for consistent explanations
-                    system="You are an expert SAT tutor who explains answer choices in SAT questions with clarity and precision.",
+                    system="You are an expert SAT tutor who explains answer choices in SAT questions with clarity and precision. IMPORTANT: When asked to respond with JSON, always use standard JSON format with double quotes around keys and string values. Never use single quotes in JSON. Do not include markdown formatting like ```json around your JSON response.",
                     messages=[
                         {
                             "role": "user",
@@ -966,7 +1236,7 @@ Here is the question to explain:
                 )
                 
                 # Extract the JSON result from the response
-                explanation_json_str = self._extract_json_from_response(response.content[0].text)
+                explanation_json_str = self._extract_json_from_response(response.content[0].text, "generate_explanation")
                 
                 # Retry if JSON extraction failed
                 if not explanation_json_str:
@@ -983,29 +1253,16 @@ Here is the question to explain:
                             "error": True
                         }
                 
-                try:
-                    explanations = json.loads(explanation_json_str)
-                except json.JSONDecodeError as e:
-                    if retry_attempt < max_retries - 1:
-                        print(f"JSON decode error in explanation: {str(e)}. Retrying in {retry_delay} seconds...")
-                        time.sleep(retry_delay)
-                        continue
-                    else:
-                        return {
-                            "explanation_correct": f"Failed to decode JSON after all retry attempts: {str(e)}",
-                            "explanation_distractor1": f"Failed to decode JSON after all retry attempts: {str(e)}",
-                            "explanation_distractor2": f"Failed to decode JSON after all retry attempts: {str(e)}",
-                            "explanation_distractor3": f"Failed to decode JSON after all retry attempts: {str(e)}",
-                            "error": True
-                        }
+                # The _extract_json_from_response function now returns a dictionary directly
+                explanation = explanation_json_str
                 
                 # Ensure we have all required fields
                 required_fields = ["explanation_correct", "explanation_distractor1", "explanation_distractor2", "explanation_distractor3"]
                 for field in required_fields:
-                    if field not in explanations:
-                        explanations[field] = f"No explanation provided for {field}."
+                    if field not in explanation:
+                        explanation[field] = f"No explanation provided for {field}."
                 
-                return explanations
+                return explanation
                 
             except Exception as e:
                 if retry_attempt < max_retries - 1:
